@@ -32,7 +32,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0 print:max-w-full print:h-full">
       {/* Header Section */}
       <header className="text-center mb-4">
-        <div className="flex justify-center items-center h-12 mb-2">
+        <div className="flex justify-center items-center h-16 mb-2">
           {logoUrl ? (
             // Using a standard <img> tag for better print reliability
             <img
@@ -70,7 +70,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       <section className="flex-grow mb-6">
         <table className="w-full border-collapse border border-black">
           <thead>
-            <tr className="bg-gray-200/70">
+            <tr>
               <th className="border border-black p-1.5 text-center font-bold w-[10%]">
                 NO.
               </th>
@@ -97,16 +97,21 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
               </tr>
             ))}
             {/* Fill remaining space with empty rows for visual consistency (6 filler rows) */}
-            {Array.from({ length: Math.max(0, 6 - (voucher.details?.items?.length || 0)) }).map((_, index) => (
+            {Array.from({
+              length: Math.max(
+                0,
+                6 - (voucher.details?.items?.length || 0)
+              ),
+            }).map((_, index) => (
               <tr key={`empty-${index}`} className="h-5">
-                <td className="border-x border-black border-t border-gray-300"></td>
-                <td className="border-x border-black border-t border-gray-300"></td>
-                <td className="border-x border-black border-t border-gray-300"></td>
+                <td className="border-x border-black border-t border-black"></td>
+                <td className="border-x border-black border-t border-black"></td>
+                <td className="border-x border-black border-t border-black"></td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="bg-gray-200/70">
+            <tr>
               <td
                 colSpan={2}
                 className="border border-black p-1.5 text-right font-bold uppercase"
@@ -123,12 +128,17 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
 
       {/* Footer Signatures */}
       <footer className="grid grid-cols-4 gap-x-4 text-xs pt-6 mt-auto">
-        {["Approved By", "Paid By", "Request By", "Received By"].map((label) => (
-          <div key={label} className="flex flex-col items-center text-center">
-            <div className="w-full border-b border-black h-6 mb-1"></div>
-            <p className="pt-1 font-bold">{label}</p>
-          </div>
-        ))}
+        {["Approved By", "Paid By", "Request By", "Received By"].map(
+          (label) => (
+            <div
+              key={label}
+              className="flex flex-col items-center text-center"
+            >
+              <div className="w-full border-b border-black h-6 mb-1"></div>
+              <p className="pt-1 font-bold">{label}</p>
+            </div>
+          )
+        )}
       </footer>
     </div>
   );

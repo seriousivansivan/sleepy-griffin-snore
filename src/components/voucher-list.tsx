@@ -44,7 +44,7 @@ export type Voucher = {
   total_amount: number;
   details: VoucherDetails;
   created_at: string;
-  companies: { name: string } | null;
+  companies: { name: string; logo_url: string | null } | null; // UPDATED: Added logo_url
 };
 
 type VoucherListProps = {

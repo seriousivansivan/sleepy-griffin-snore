@@ -28,7 +28,7 @@ export default function DashboardPage() {
       setVouchersLoading(true);
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name)`)
+        .select(`*, companies(name, logo_url)`) // UPDATED: Fetch logo_url
         .order("created_at", { ascending: false });
 
       if (error) {

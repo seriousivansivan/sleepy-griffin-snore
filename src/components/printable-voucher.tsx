@@ -1,8 +1,8 @@
 "use client";
 
 import { Voucher } from "@/components/voucher-list";
-import { numberToWordsEn } from "@/lib/utils";
 import { format } from "date-fns";
+import Image from "next/image"; // Import Image component for optimized image handling
 
 type PrintableVoucherProps = {
   voucher: Voucher;
@@ -25,12 +25,29 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     }).format(amount);
   };
 
+  const companyName = voucher.companies?.name || "Company Name";
+  const logoUrl = voucher.companies?.logo_url;
+
   // Using a wider container (e.g., A4 width equivalent for better screen viewing, but allowing print to expand)
   return (
     <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0">
       {/* Header Section */}
       <header className="text-center mb-4">
-        <p className="text-xs mb-1">[LOGO]</p>
+        <div className="flex justify-center items-center h-12 mb-2">
+          {logoUrl ? (
+            // Use Next.js Image component for optimized loading, setting a max height
+            <Image
+              src={logoUrl}
+              alt={`${companyName} Logo`}
+              width={150} // Set a reasonable width
+              height={48} // Set a max height
+              style={{ objectFit: "contain" }}
+              className="max-h-full w-auto"
+            />
+          ) : (
+            <p className="text-lg font-semibold">{companyName}</p>
+          )}
+        </div>
         <h1 className="text-xl font-bold uppercase border-b border-black inline-block px-4 pb-1">
           Petty Cash Voucher
         </h1>
@@ -112,7 +129,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         {["Approved By", "Paid By", "Request By", "Received By"].map((label) => (
           <div key={label} className="flex flex-col items-center text-center">
             <div className="w-full border-b border-black h-6 mb-1"></div>
-            <p className="pt-1">{label}</p>
+            <p className="pt-1 font-bold">{label}</p>
           </div>
         ))}
       </footer>

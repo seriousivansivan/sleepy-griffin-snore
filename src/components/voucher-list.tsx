@@ -149,7 +149,7 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
                         </TooltipTrigger>
                         <TooltipContent>
                           <ul className="list-disc pl-4">
-                            {voucher.details?.items.map((item, index) => (
+                            {voucher.details?.items?.map((item, index) => (
                               <li key={index}>{item.particulars}</li>
                             ))}
                           </ul>

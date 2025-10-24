@@ -69,7 +69,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
             </tr>
           </thead>
           <tbody>
-            {voucher.details.items.map((item, index) => (
+            {voucher.details?.items?.map((item, index) => (
               <tr key={index}>
                 <td className="border-b border-black p-2">{item.particulars}</td>
                 <td className="border-b border-black p-2 text-right">{formatCurrency(item.amount)}</td>

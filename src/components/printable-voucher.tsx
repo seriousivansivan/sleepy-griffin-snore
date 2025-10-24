@@ -107,16 +107,6 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         </table>
       </section>
 
-      {/* Amount in Words Section */}
-      <section className="mb-6">
-        <div className="flex items-end">
-          <p className="font-semibold whitespace-nowrap mr-2">Amount in Words:</p>
-          <p className="flex-1 border-b border-black pb-[1px] text-left italic">
-            {numberToWordsEn(voucher.total_amount)}
-          </p>
-        </div>
-      </section>
-
       {/* Footer Signatures */}
       <footer className="grid grid-cols-4 gap-x-4 text-xs pt-6 mt-auto">
         {["Approved By", "Paid By", "Request By", "Received By"].map((label) => (

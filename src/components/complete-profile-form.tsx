@@ -40,7 +40,7 @@ type Company = {
 };
 
 export function CompleteProfileForm() {
-  const { supabase, session } = useSupabaseAuth();
+  const { supabase, session, refreshProfile } = useSupabaseAuth();
   const router = useRouter();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +88,11 @@ export function CompleteProfileForm() {
       if (companyLinkError) throw companyLinkError;
 
       toast.success("Profile updated successfully!");
+
+      // 3. Refresh the profile data in the auth context
+      await refreshProfile();
+
+      // 4. Redirect to dashboard
       router.push("/dashboard");
     } catch (error) {
       console.error("Error updating profile:", error);

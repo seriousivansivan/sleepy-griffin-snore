@@ -19,6 +19,7 @@ type SupabaseContextType = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>; // New function
 };
 
 const SupabaseContext = createContext<SupabaseContextType | null>(null);
@@ -28,25 +29,29 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async (currentSession: Session | null) => {
+    if (currentSession) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*, user_companies(company_id)")
+        .eq("id", currentSession.user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error.message);
+        setProfile(null);
+      } else {
+        setProfile(data as Profile);
+      }
+    } else {
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      if (session) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*, user_companies(company_id)")
-          .eq("id", session.user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching profile:", error.message);
-          setProfile(null);
-        } else {
-          setProfile(data as Profile);
-        }
-      } else {
-        setProfile(null);
-      }
+      await fetchProfile(session);
       setLoading(false);
     });
 
@@ -55,11 +60,17 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     };
   }, []);
 
+  const refreshProfile = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    await fetchProfile(currentSession);
+  };
+
   const value = {
     supabase,
     session,
     profile,
     loading,
+    refreshProfile,
   };
 
   return (

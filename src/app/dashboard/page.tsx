@@ -26,27 +26,31 @@ export default function DashboardPage() {
   }, [session, loading, router, profile]);
 
   const fetchVouchers = useCallback(async () => {
-    if (session) {
-      setVouchersLoading(true);
+    setVouchersLoading(true);
+    try {
       const { data, error } = await supabase
         .from("vouchers")
         .select(`*, companies(name, logo_url)`)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching vouchers:", error);
-      } else {
-        setVouchers(data || []);
+        throw error;
       }
+      setVouchers(data || []);
+    } catch (error) {
+      console.error("Error fetching vouchers:", error);
+    } finally {
       setVouchersLoading(false);
     }
-  }, [session, supabase]);
+  }, [supabase]);
 
   useEffect(() => {
+    // This effect now only runs on initial load or when the user actually changes.
+    // It will no longer run on every session refresh (e.g., on tab focus).
     if (!loading && session) {
       fetchVouchers();
     }
-  }, [session, loading, fetchVouchers]);
+  }, [session?.user.id, loading, fetchVouchers]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

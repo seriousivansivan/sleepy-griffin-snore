@@ -3,11 +3,14 @@
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { VoucherList, Voucher } from "@/components/voucher-list";
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
   const router = useRouter();
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [vouchersLoading, setVouchersLoading] = useState(true);
 
   useEffect(() => {
     if (!loading) {
@@ -19,12 +22,40 @@ export default function DashboardPage() {
     }
   }, [session, loading, router, profile]);
 
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      if (session) {
+        setVouchersLoading(true);
+        const { data, error } = await supabase
+          .from("vouchers")
+          .select(`*, companies(name)`)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching vouchers:", error);
+        } else {
+          setVouchers(data || []);
+        }
+        setVouchersLoading(false);
+      }
+    };
+
+    if (!loading && session) {
+      fetchVouchers();
+    }
+  }, [session, supabase, loading]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push("/login");
   };
 
-  if (loading || !session || !profile?.user_name || profile.user_companies.length === 0) {
+  if (
+    loading ||
+    !session ||
+    !profile?.user_name ||
+    profile.user_companies.length === 0
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
@@ -33,15 +64,26 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-4xl w-full text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to your Dashboard</h1>
-        <p className="text-lg text-gray-600 mb-8">
-          You are logged in as: {profile.user_name}
-        </p>
-        <Button onClick={handleLogout}>
-          Logout
-        </Button>
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-1">
+              Welcome back, {profile.user_name}.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleLogout} variant="outline">
+              Logout
+            </Button>
+            <Button>Create New Voucher</Button>
+          </div>
+        </header>
+
+        <main>
+          <VoucherList vouchers={vouchers} isLoading={vouchersLoading} />
+        </main>
       </div>
     </div>
   );

@@ -151,3 +151,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  @page {
+    size: A5;
+    margin: 1cm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

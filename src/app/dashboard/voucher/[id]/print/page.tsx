@@ -27,7 +27,7 @@ export default function PrintVoucherPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("vouchers")
-        .select("*, companies(name)")
+        .select("*, companies(name, logo_url)")
         .eq("id", params.id)
         .single();
 

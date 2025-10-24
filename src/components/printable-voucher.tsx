@@ -84,7 +84,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
           </thead>
           <tbody>
             {voucher.details?.items?.map((item, index) => (
-              <tr key={index} className="h-5">
+              <tr key={index} className="h-7">
                 <td className="border-x border-t border-black p-1.5 text-center align-top">
                   {index + 1}
                 </td>
@@ -103,7 +103,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
                 6 - (voucher.details?.items?.length || 0)
               ),
             }).map((_, index) => (
-              <tr key={`empty-${index}`} className="h-5">
+              <tr key={`empty-${index}`} className="h-7">
                 <td className="border-x border-t border-black"></td>
                 <td className="border-x border-t border-black"></td>
                 <td className="border-x border-t border-black"></td>

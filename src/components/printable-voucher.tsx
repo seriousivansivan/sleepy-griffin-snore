@@ -32,7 +32,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0 print:max-w-full print:h-full">
       {/* Header Section */}
       <header className="text-center mb-4">
-        <div className="flex justify-center items-center h-24 mb-2">
+        <div className="flex justify-center items-center h-20 mb-2">
           {logoUrl ? (
             // Using a standard <img> tag for better print reliability
             <img
@@ -85,18 +85,18 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
           <tbody>
             {voucher.details?.items?.map((item, index) => (
               <tr key={index}>
-                <td className="border-x border-black p-1.5 text-center align-top">
+                <td className="border-x border-t border-black p-1.5 text-center align-top">
                   {index + 1}
                 </td>
-                <td className="border-x border-black p-1.5 align-top">
+                <td className="border-x border-t border-black p-1.5 align-top">
                   {item.particulars}
                 </td>
-                <td className="border-x border-black p-1.5 text-right align-top">
+                <td className="border-x border-t border-black p-1.5 text-right align-top">
                   {formatCurrency(item.amount)}
                 </td>
               </tr>
             ))}
-            {/* Fill remaining space with empty rows for visual consistency (6 filler rows) */}
+            {/* Fill remaining space with empty rows for visual consistency */}
             {Array.from({
               length: Math.max(
                 0,
@@ -104,9 +104,9 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
               ),
             }).map((_, index) => (
               <tr key={`empty-${index}`} className="h-5">
-                <td className="border-x border-black border-t border-black"></td>
-                <td className="border-x border-black border-t border-black"></td>
-                <td className="border-x border-black border-t border-black"></td>
+                <td className="border-x border-black"></td>
+                <td className="border-x border-black"></td>
+                <td className="border-x border-black"></td>
               </tr>
             ))}
           </tbody>

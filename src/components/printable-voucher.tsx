@@ -108,9 +108,9 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       </section>
 
       {/* Footer Signatures */}
-      <footer className="grid grid-cols-2 gap-x-8 text-center text-xs pt-6 mt-auto">
+      <footer className="grid grid-cols-2 gap-x-8 text-xs pt-6 mt-auto">
         {/* Left Column */}
-        <div className="flex flex-col justify-between h-full">
+        <div className="flex flex-col justify-between h-full text-left">
           <div className="w-full mb-6">
             <p className="border-t border-black pt-1">Approved By</p>
           </div>
@@ -119,7 +119,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
           </div>
         </div>
         {/* Right Column */}
-        <div className="flex flex-col justify-between h-full">
+        <div className="flex flex-col justify-between h-full text-left">
           <div className="w-full mb-6">
             <p className="border-t border-black pt-1">Request By</p>
           </div>

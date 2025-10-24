@@ -25,11 +25,12 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     }).format(amount);
   };
 
-  const amountInWords = numberToWordsEn(voucher.total_amount);
+  // We no longer need amountInWords since the section is removed.
+  // const amountInWords = numberToWordsEn(voucher.total_amount);
 
-  // A5 dimensions: 148mm x 210mm (using a slightly larger container for better visual fit on screen)
+  // Using a wider container (e.g., A4 width equivalent for better screen viewing, but allowing print to expand)
   return (
-    <div className="bg-white text-black p-6 font-sans w-[148mm] h-[210mm] border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt]">
+    <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0">
       {/* Header Section */}
       <header className="text-center mb-6">
         <p className="text-xs mb-1">[LOGO]</p>
@@ -55,7 +56,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       </section>
 
       {/* Table Section */}
-      <section className="flex-grow">
+      <section className="flex-grow mb-8">
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr className="bg-gray-200/70">
@@ -84,7 +85,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
                 </td>
               </tr>
             ))}
-            {/* Fill remaining space with empty rows for visual consistency and to push the total row down */}
+            {/* Fill remaining space with empty rows for visual consistency */}
             {Array.from({ length: Math.max(0, 8 - (voucher.details?.items?.length || 0)) }).map((_, index) => (
               <tr key={`empty-${index}`} className="h-6">
                 <td className="border-x border-black"></td>
@@ -109,15 +110,8 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         </table>
       </section>
 
-      {/* Amount in Words Section (Optional, based on template interpretation) */}
-      {/* Keeping this section for now, but styling it simply as a note, not a box */}
-      <section className="mt-4 text-xs">
-        <p className="font-semibold">Amount in Words:</p>
-        <p className="italic">{amountInWords}</p>
-      </section>
-
-      {/* Footer Signatures */}
-      <footer className="grid grid-cols-2 gap-x-8 mt-auto text-center text-xs pt-8">
+      {/* Footer Signatures - Placed immediately after the table section */}
+      <footer className="grid grid-cols-2 gap-x-8 text-center text-xs pt-8 mt-auto">
         <div className="flex flex-col space-y-6">
           <div className="w-full">
             <p className="border-t border-black pt-1">Approved By</p>

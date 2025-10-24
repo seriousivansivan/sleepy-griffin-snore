@@ -3,8 +3,9 @@
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
+import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
@@ -22,28 +23,28 @@ export default function DashboardPage() {
     }
   }, [session, loading, router, profile]);
 
-  useEffect(() => {
-    const fetchVouchers = async () => {
-      if (session) {
-        setVouchersLoading(true);
-        const { data, error } = await supabase
-          .from("vouchers")
-          .select(`*, companies(name)`)
-          .order("created_at", { ascending: false });
+  const fetchVouchers = useCallback(async () => {
+    if (session) {
+      setVouchersLoading(true);
+      const { data, error } = await supabase
+        .from("vouchers")
+        .select(`*, companies(name)`)
+        .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error("Error fetching vouchers:", error);
-        } else {
-          setVouchers(data || []);
-        }
-        setVouchersLoading(false);
+      if (error) {
+        console.error("Error fetching vouchers:", error);
+      } else {
+        setVouchers(data || []);
       }
-    };
+      setVouchersLoading(false);
+    }
+  }, [session, supabase]);
 
+  useEffect(() => {
     if (!loading && session) {
       fetchVouchers();
     }
-  }, [session, supabase, loading]);
+  }, [session, loading, fetchVouchers]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -77,7 +78,7 @@ export default function DashboardPage() {
             <Button onClick={handleLogout} variant="outline">
               Logout
             </Button>
-            <Button>Create New Voucher</Button>
+            <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
           </div>
         </header>
 

@@ -2,7 +2,6 @@
 
 import { Voucher } from "@/components/voucher-list";
 import { format } from "date-fns";
-import Image from "next/image"; // Import Image component for optimized image handling
 
 type PrintableVoucherProps = {
   voucher: Voucher;
@@ -35,14 +34,12 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       <header className="text-center mb-4">
         <div className="flex justify-center items-center h-12 mb-2">
           {logoUrl ? (
-            // Use Next.js Image component for optimized loading, setting a max height
-            <Image
+            // Using a standard <img> tag for better print reliability
+            <img
               src={logoUrl}
               alt={`${companyName} Logo`}
-              width={150} // Set a reasonable width
-              height={48} // Set a max height
-              style={{ objectFit: "contain" }}
               className="max-h-full w-auto"
+              style={{ objectFit: "contain" }}
             />
           ) : (
             <p className="text-lg font-semibold">{companyName}</p>

@@ -107,26 +107,24 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         </table>
       </section>
 
+      {/* Amount in Words Section */}
+      <section className="mb-6">
+        <div className="flex items-end">
+          <p className="font-semibold whitespace-nowrap mr-2">Amount in Words:</p>
+          <p className="flex-1 border-b border-black pb-[1px] text-left italic">
+            {numberToWordsEn(voucher.total_amount)}
+          </p>
+        </div>
+      </section>
+
       {/* Footer Signatures */}
-      <footer className="grid grid-cols-2 gap-x-8 text-xs pt-6 mt-auto">
-        {/* Left Column */}
-        <div className="flex flex-col justify-between h-full text-left">
-          <div className="w-full mb-6">
-            <p className="border-t border-black pt-1">Approved By</p>
+      <footer className="grid grid-cols-4 gap-x-4 text-xs pt-6 mt-auto">
+        {["Approved By", "Paid By", "Request By", "Received By"].map((label) => (
+          <div key={label} className="flex flex-col items-center text-center">
+            <div className="w-full border-b border-black h-6 mb-1"></div>
+            <p className="pt-1">{label}</p>
           </div>
-          <div className="w-full">
-            <p className="border-t border-black pt-1">Paid By</p>
-          </div>
-        </div>
-        {/* Right Column */}
-        <div className="flex flex-col justify-between h-full text-left">
-          <div className="w-full mb-6">
-            <p className="border-t border-black pt-1">Request By</p>
-          </div>
-          <div className="w-full">
-            <p className="border-t border-black pt-1">Received By</p>
-          </div>
-        </div>
+        ))}
       </footer>
     </div>
   );

@@ -23,6 +23,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
+import Link from "next/link";
 
 // Define the type for the voucher details
 type VoucherDetails = {
@@ -108,8 +111,9 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
                   <TableHead>Company</TableHead>
                   <TableHead>Pay To</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Particulars</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -126,9 +130,6 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
                     <TableCell>
                       {formatDate(voucher.details?.date || voucher.created_at)}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(voucher.total_amount)}
-                    </TableCell>
                     <TableCell>
                       <Tooltip>
                         <TooltipTrigger className="truncate max-w-[200px] text-left block">
@@ -138,6 +139,27 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
                           <p className="max-w-xs">
                             {voucher.details?.particulars}
                           </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(voucher.total_amount)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link
+                              href={`/dashboard/voucher/${voucher.id}/print`}
+                              target="_blank"
+                            >
+                              <Printer className="h-4 w-4" />
+                              <span className="sr-only">Print Voucher</span>
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Print Voucher</p>
                         </TooltipContent>
                       </Tooltip>
                     </TableCell>

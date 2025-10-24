@@ -89,7 +89,7 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
           <CardTitle>Your Vouchers</CardTitle>
           <CardDescription>
             Here is a list of your recent vouchers.
-          </Description>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {vouchers.length === 0 ? (

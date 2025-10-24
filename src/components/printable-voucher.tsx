@@ -32,7 +32,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0 print:max-w-full print:h-full">
       {/* Header Section */}
       <header className="text-center mb-4">
-        <div className="flex justify-center items-center h-20 mb-2">
+        <div className="flex justify-center items-center h-16 mb-2">
           {logoUrl ? (
             // Using a standard <img> tag for better print reliability
             <img

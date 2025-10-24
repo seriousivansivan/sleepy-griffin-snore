@@ -32,7 +32,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0 print:max-w-full print:h-full">
       {/* Header Section */}
       <header className="text-center mb-4">
-        <div className="flex justify-center items-center h-16 mb-2">
+        <div className="flex justify-center items-center h-24 mb-2">
           {logoUrl ? (
             // Using a standard <img> tag for better print reliability
             <img
@@ -71,13 +71,13 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr>
-              <th className="border border-black p-1.5 text-center font-bold w-[10%]">
+              <th className="border border-black p-1.5 text-center font-bold w-[10%] bg-white">
                 NO.
               </th>
-              <th className="border border-black p-1.5 text-center font-bold w-[65%]">
+              <th className="border border-black p-1.5 text-center font-bold w-[65%] bg-white">
                 PARTICULARS
               </th>
-              <th className="border border-black p-1.5 text-center font-bold w-[25%]">
+              <th className="border border-black p-1.5 text-center font-bold w-[25%] bg-white">
                 AMOUNT
               </th>
             </tr>
@@ -114,11 +114,11 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
             <tr>
               <td
                 colSpan={2}
-                className="border border-black p-1.5 text-right font-bold uppercase"
+                className="border border-black p-1.5 text-right font-bold uppercase bg-white"
               >
                 Total
               </td>
-              <td className="border border-black p-1.5 text-right font-bold">
+              <td className="border border-black p-1.5 text-right font-bold bg-white">
                 {formatCurrency(voucher.total_amount)}
               </td>
             </tr>

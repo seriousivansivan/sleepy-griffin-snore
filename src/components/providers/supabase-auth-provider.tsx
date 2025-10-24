@@ -19,7 +19,7 @@ type SupabaseContextType = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  refreshProfile: () => Promise<void>; // New function
+  refreshProfile: () => Promise<void>;
 };
 
 const SupabaseContext = createContext<SupabaseContextType | null>(null);
@@ -49,10 +49,20 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Proactively fetch the session on initial load. This is faster than waiting for onAuthStateChange.
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       await fetchProfile(session);
       setLoading(false);
+    };
+
+    getInitialSession();
+
+    // Set up a listener for subsequent auth state changes (e.g., sign out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      await fetchProfile(session);
     });
 
     return () => {

@@ -47,6 +47,8 @@ export function CompleteProfileForm() {
 
   useEffect(() => {
     const fetchCompanies = async () => {
+      if (!session) return; // Don't fetch if there's no session
+
       const { data, error } = await supabase.from("companies").select("id, name");
       if (error) {
         toast.error("Could not load companies.");
@@ -56,7 +58,7 @@ export function CompleteProfileForm() {
       }
     };
     fetchCompanies();
-  }, [supabase]);
+  }, [supabase, session]); // Add session to the dependency array
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

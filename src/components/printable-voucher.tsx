@@ -25,9 +25,6 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
     }).format(amount);
   };
 
-  // We no longer need amountInWords since the section is removed.
-  // const amountInWords = numberToWordsEn(voucher.total_amount);
-
   // Using a wider container (e.g., A4 width equivalent for better screen viewing, but allowing print to expand)
   return (
     <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0">
@@ -49,7 +46,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         </div>
         <div className="flex items-end">
           <p className="font-semibold whitespace-nowrap mr-2">Date:</p>
-          <p className="border-b border-black pb-[1px] text-right">
+          <p className="border-b border-black pb-[1px] text-right min-w-[100px]">
             {formatDate(voucher.details.date)}
           </p>
         </div>
@@ -88,9 +85,9 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
             {/* Fill remaining space with empty rows for visual consistency */}
             {Array.from({ length: Math.max(0, 8 - (voucher.details?.items?.length || 0)) }).map((_, index) => (
               <tr key={`empty-${index}`} className="h-6">
-                <td className="border-x border-black"></td>
-                <td className="border-x border-black"></td>
-                <td className="border-x border-black"></td>
+                <td className="border-x border-black border-t border-gray-300"></td>
+                <td className="border-x border-black border-t border-gray-300"></td>
+                <td className="border-x border-black border-t border-gray-300"></td>
               </tr>
             ))}
           </tbody>
@@ -110,18 +107,20 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
         </table>
       </section>
 
-      {/* Footer Signatures - Placed immediately after the table section */}
+      {/* Footer Signatures */}
       <footer className="grid grid-cols-2 gap-x-8 text-center text-xs pt-8 mt-auto">
-        <div className="flex flex-col space-y-6">
-          <div className="w-full">
+        {/* Left Column */}
+        <div className="flex flex-col justify-between h-full">
+          <div className="w-full mb-8">
             <p className="border-t border-black pt-1">Approved By</p>
           </div>
           <div className="w-full">
             <p className="border-t border-black pt-1">Paid By</p>
           </div>
         </div>
-        <div className="flex flex-col space-y-6">
-          <div className="w-full">
+        {/* Right Column */}
+        <div className="flex flex-col justify-between h-full">
+          <div className="w-full mb-8">
             <p className="border-t border-black pt-1">Request By</p>
           </div>
           <div className="w-full">

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
+import Link from "next/link";
+import { Settings } from "lucide-react";
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
@@ -28,7 +30,7 @@ export default function DashboardPage() {
       setVouchersLoading(true);
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url)`) // UPDATED: Fetch logo_url
+        .select(`*, companies(name, logo_url)`)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -75,6 +77,12 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" asChild>
+              <Link href="/dashboard/settings">
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Settings</span>
+              </Link>
+            </Button>
             <Button onClick={handleLogout} variant="outline">
               Logout
             </Button>

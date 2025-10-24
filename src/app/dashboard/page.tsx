@@ -48,23 +48,6 @@ export default function DashboardPage() {
     }
   }, [session, loading, fetchVouchers]);
 
-  // New useEffect hook to handle visibility change (for returning from print view)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && session) {
-        // Refetch data when the tab becomes visible again
-        fetchVouchers();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [session, fetchVouchers]);
-
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");

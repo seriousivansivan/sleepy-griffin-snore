@@ -27,18 +27,22 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import Link from "next/link";
 
-// Define the type for the voucher details
+// Define the types for the new voucher structure
+type VoucherItem = {
+  particulars: string;
+  amount: number;
+};
+
 type VoucherDetails = {
   payTo: string;
   date: string;
-  particulars: string;
+  items: VoucherItem[];
 };
 
-// Update the Voucher type to include the structured details
 export type Voucher = {
   id: number;
   total_amount: number;
-  details: VoucherDetails; // Use the new type
+  details: VoucherDetails;
   created_at: string;
   companies: { name: string } | null;
 };
@@ -50,19 +54,27 @@ type VoucherListProps = {
 
 export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("th-TH", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "THB",
+      currency: "USD", // Changed to USD as per English-only requirement
     }).format(amount);
   };
 
-  // This will now format the date from the details object
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
+  };
+
+  const getParticularsPreview = (items: VoucherItem[]) => {
+    if (!items || items.length === 0) return "No details";
+    const firstItem = items[0].particulars;
+    if (items.length > 1) {
+      return `${firstItem} (+${items.length - 1} more)`;
+    }
+    return firstItem;
   };
 
   if (isLoading) {
@@ -133,12 +145,14 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
                     <TableCell>
                       <Tooltip>
                         <TooltipTrigger className="truncate max-w-[200px] text-left block">
-                          {voucher.details?.particulars || "No details"}
+                          {getParticularsPreview(voucher.details?.items)}
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-xs">
-                            {voucher.details?.particulars}
-                          </p>
+                          <ul className="list-disc pl-4">
+                            {voucher.details?.items.map((item, index) => (
+                              <li key={index}>{item.particulars}</li>
+                            ))}
+                          </ul>
                         </TooltipContent>
                       </Tooltip>
                     </TableCell>

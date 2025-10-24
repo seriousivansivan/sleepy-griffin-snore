@@ -1,7 +1,7 @@
 "use client";
 
 import { Voucher } from "@/components/voucher-list";
-import { numberToWordsTh } from "@/lib/utils";
+import { numberToWordsEn } from "@/lib/utils";
 
 type PrintableVoucherProps = {
   voucher: Voucher;
@@ -11,7 +11,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
   if (!voucher) return null;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("th-TH", {
+    return new Date(dateString).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "long",
       year: "numeric",
@@ -19,38 +19,37 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("th-TH", {
+    return new Intl.NumberFormat("en-US", {
       style: "decimal",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
   };
 
-  const amountInWords = numberToWordsTh(voucher.total_amount);
+  const amountInWords = numberToWordsEn(voucher.total_amount);
 
   return (
-    <div className="bg-white text-black p-8 font-sarabun w-[148mm] h-[210mm] border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col">
+    <div className="bg-white text-black p-8 font-sans w-[148mm] h-[210mm] border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col">
       <header className="flex justify-between items-start mb-4">
         <div className="w-1/3">
           <h2 className="font-bold text-lg">{voucher.companies?.name}</h2>
         </div>
         <div className="w-1/3 text-center">
-          <h1 className="text-2xl font-bold">ใบสำคัญจ่าย</h1>
-          <h2 className="text-lg">Petty Cash Voucher</h2>
+          <h1 className="text-2xl font-bold">Payment Voucher</h1>
         </div>
         <div className="w-1/3 text-right text-sm">
           <p>
-            <span className="font-semibold">เลขที่:</span> {String(voucher.id).padStart(6, "0")}
+            <span className="font-semibold">No:</span> {String(voucher.id).padStart(6, "0")}
           </p>
           <p>
-            <span className="font-semibold">วันที่:</span> {formatDate(voucher.details.date)}
+            <span className="font-semibold">Date:</span> {formatDate(voucher.details.date)}
           </p>
         </div>
       </header>
 
       <section className="border-t border-b border-black py-2 my-4">
         <div className="flex">
-          <p className="w-auto font-semibold mr-2">จ่ายให้ (Pay to):</p>
+          <p className="w-auto font-semibold mr-2">Pay to:</p>
           <p className="flex-1 border-b border-dotted border-gray-500">
             {voucher.details.payTo}
           </p>
@@ -62,29 +61,27 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
           <thead>
             <tr className="bg-gray-100">
               <th className="border border-black p-2 text-center font-semibold">
-                รายการ (Particulars)
+                Particulars
               </th>
               <th className="border border-black p-2 text-center font-semibold w-1/4">
-                จำนวนเงิน (Amount)
+                Amount
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td className="border border-black p-2 align-top h-32">
-                {voucher.details.particulars}
-              </td>
-              <td className="border border-black p-2 text-right align-top">
-                {formatCurrency(voucher.total_amount)}
-              </td>
-            </tr>
+            {voucher.details.items.map((item, index) => (
+              <tr key={index}>
+                <td className="border-b border-black p-2">{item.particulars}</td>
+                <td className="border-b border-black p-2 text-right">{formatCurrency(item.amount)}</td>
+              </tr>
+            ))}
           </tbody>
           <tfoot>
             <tr className="bg-gray-100">
               <td className="border border-black p-2 text-right font-semibold">
-                รวมทั้งสิ้น (Total)
+                Total
               </td>
-              <td className="border border-black p-2 text-right font-semibold">
+              <td className="border-black p-2 text-right font-semibold">
                 {formatCurrency(voucher.total_amount)}
               </td>
             </tr>
@@ -99,27 +96,23 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       <footer className="flex justify-around mt-auto text-center text-sm pt-8">
         <div className="w-1/4">
           <p className="border-t border-dotted border-gray-500 pt-2 mt-8">
-            ผู้จัดทำ
+            Prepared by
           </p>
-          <p>(Prepared by)</p>
         </div>
         <div className="w-1/4">
           <p className="border-t border-dotted border-gray-500 pt-2 mt-8">
-            ผู้ตรวจสอบ
+            Checked by
           </p>
-          <p>(Checked by)</p>
         </div>
         <div className="w-1/4">
           <p className="border-t border-dotted border-gray-500 pt-2 mt-8">
-            ผู้อนุมัติ
+            Approved by
           </p>
-          <p>(Approved by)</p>
         </div>
         <div className="w-1/4">
           <p className="border-t border-dotted border-gray-500 pt-2 mt-8">
-            ผู้รับเงิน
+            Receiver
           </p>
-          <p>(Receiver)</p>
         </div>
       </footer>
     </div>

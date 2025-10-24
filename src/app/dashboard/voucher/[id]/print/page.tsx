@@ -9,16 +9,26 @@ import { Button } from "@/components/ui/button";
 
 export default function PrintVoucherPage() {
   const params = useParams();
-  const { supabase, session } = useSupabaseAuth();
+  const { supabase, session, loading: authLoading } = useSupabaseAuth(); // Use the loading state from the auth provider
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVoucher = async () => {
-      if (!session || !params.id) {
-        // If there's no session yet, don't set an error, just wait.
-        if (!session) return;
+      // Wait until the auth provider is done loading
+      if (authLoading) {
+        return;
+      }
+
+      // If auth is done and there's no session, show an error
+      if (!session) {
+        setError("You must be logged in to view this voucher.");
+        setLoading(false);
+        return;
+      }
+
+      if (!params.id) {
         setError("Voucher ID is missing.");
         setLoading(false);
         return;
@@ -45,7 +55,7 @@ export default function PrintVoucherPage() {
     };
 
     fetchVoucher();
-  }, [params.id, session, supabase]);
+  }, [params.id, session, supabase, authLoading]); // Add authLoading to the dependency array
 
   useEffect(() => {
     if (voucher && !loading && !error) {
@@ -56,7 +66,7 @@ export default function PrintVoucherPage() {
     }
   }, [voucher, loading, error]);
 
-  if (loading) {
+  if (loading || authLoading) { // Show loading indicator while auth is pending
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <p>Loading voucher for printing...</p>

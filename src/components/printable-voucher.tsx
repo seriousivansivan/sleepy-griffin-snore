@@ -67,7 +67,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       </section>
 
       {/* Table Section */}
-      <section className="flex-grow mb-6">
+      <section className="flex-grow mb-4">
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr>
@@ -104,9 +104,9 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
               ),
             }).map((_, index) => (
               <tr key={`empty-${index}`} className="h-5">
-                <td className="border-x border-black"></td>
-                <td className="border-x border-black"></td>
-                <td className="border-x border-black"></td>
+                <td className="border-x border-t border-black"></td>
+                <td className="border-x border-t border-black"></td>
+                <td className="border-x border-t border-black"></td>
               </tr>
             ))}
           </tbody>
@@ -127,7 +127,7 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
       </section>
 
       {/* Footer Signatures */}
-      <footer className="grid grid-cols-4 gap-x-4 text-xs pt-6 mt-auto">
+      <footer className="grid grid-cols-4 gap-x-4 text-xs pt-4 mt-auto">
         {["Approved By", "Paid By", "Request By", "Received By"].map(
           (label) => (
             <div

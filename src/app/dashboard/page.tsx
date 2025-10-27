@@ -3,17 +3,28 @@
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
 import { Settings, Shield } from "lucide-react";
+import { VoucherFilters } from "@/components/voucher-filters";
+import { toast } from "sonner";
+
+type Company = {
+  id: string;
+  name: string;
+};
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [vouchersLoading, setVouchersLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    searchTerm: "",
+    selectedCompanyId: null as string | null,
+  });
 
   useEffect(() => {
     if (!loading) {
@@ -25,13 +36,64 @@ export default function DashboardPage() {
     }
   }, [session, loading, router, profile]);
 
+  const userCompanies = useMemo(() => {
+    if (!profile || profile.user_companies.length === 0) return [];
+    // We need to fetch the company names for the filter dropdown.
+    // Since the profile only contains company IDs, we'll fetch the full list of companies
+    // the user is associated with in a separate effect below.
+    // For now, we'll use a placeholder structure based on the IDs we have.
+    return profile.user_companies.map((uc) => ({ id: uc.company_id, name: uc.company_id }));
+  }, [profile]);
+
+  // State to hold the actual company names for the filter dropdown
+  const [filterCompanies, setFilterCompanies] = useState<Company[]>([]);
+
+  // Effect to fetch company names for the filter dropdown
+  useEffect(() => {
+    const fetchCompanyNames = async () => {
+      if (!profile || profile.user_companies.length === 0) return;
+      const companyIds = profile.user_companies.map((uc) => uc.company_id);
+
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds);
+
+      if (error) {
+        console.error("Failed to fetch company names for filter:", error);
+        toast.error("Failed to load company names for filtering.");
+      } else {
+        setFilterCompanies(data || []);
+      }
+    };
+    if (session && profile) {
+      fetchCompanyNames();
+    }
+  }, [session, profile, supabase]);
+
+
   const fetchVouchers = useCallback(async () => {
+    if (!session) return;
+
     setVouchersLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("vouchers")
         .select(`*, companies(name, logo_url)`)
         .order("created_at", { ascending: false });
+
+      // 1. Filter by Company ID
+      if (filters.selectedCompanyId) {
+        query = query.eq("company_id", filters.selectedCompanyId);
+      }
+
+      // 2. Filter by Pay To search term (case-insensitive partial match on JSONB field)
+      if (filters.searchTerm) {
+        // Use ilike on the JSONB path 'details->>payTo'
+        query = query.ilike("details->>payTo", `%${filters.searchTerm}%`);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;
@@ -39,18 +101,18 @@ export default function DashboardPage() {
       setVouchers(data || []);
     } catch (error) {
       console.error("Error fetching vouchers:", error);
+      toast.error("Failed to load vouchers.");
     } finally {
       setVouchersLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, session, filters]);
 
   useEffect(() => {
-    // This effect now only runs on initial load or when the user actually changes.
-    // It will no longer run on every session refresh (e.g., on tab focus).
+    // Trigger fetch whenever filters change
     if (!loading && session) {
       fetchVouchers();
     }
-  }, [session?.user.id, loading, fetchVouchers]);
+  }, [session?.user.id, loading, fetchVouchers, filters]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -112,6 +174,18 @@ export default function DashboardPage() {
             <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
           </div>
         </header>
+
+        <div className="mb-6">
+          <VoucherFilters
+            companies={filterCompanies}
+            onFilterChange={(newFilters) =>
+              setFilters({
+                searchTerm: newFilters.searchTerm,
+                selectedCompanyId: newFilters.companyId,
+              })
+            }
+          />
+        </div>
 
         <main>
           <VoucherList vouchers={vouchers} isLoading={vouchersLoading} />

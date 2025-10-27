@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Settings } from "lucide-react";
+import { Home, Users, Settings, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNavItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: Home },
   { href: "/admin/users", label: "User Management", icon: Users },
+  { href: "/admin/companies", label: "Company Management", icon: Building },
 ];
 
 export function AdminSidebar() {

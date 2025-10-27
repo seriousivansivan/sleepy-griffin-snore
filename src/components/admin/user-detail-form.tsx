@@ -1,410 +1,195 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState, useEffect } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
-import { toast } from "sonner";
-import type { Profile } from "@/components/providers/supabase-auth-provider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
-import { ChangePasswordDialog } from "./change-password-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { User } from "@supabase/supabase-js";
+import { Loader2 } from "lucide-react";
 
-const formSchema = z.object({
-  role: z.enum(["user", "admin"]),
-  monthly_credit_allowance: z.coerce
-    .number()
-    .min(0, "Allowance cannot be negative."),
-  has_unlimited_credit: z.boolean().default(false),
-  companyIds: z.array(z.string()).default([]),
-});
-
-type Company = {
+type Profile = {
   id: string;
-  name: string;
+  role: string;
+  credit: number;
+  user_name: string | null;
+  monthly_credit_allowance: number;
+  has_unlimited_credit: boolean;
 };
 
 type UserDetailFormProps = {
-  user: Profile;
-  onUserUpdated: () => void;
+  user: User;
+  profile: Profile | null;
+  onProfileUpdate: (newProfile: Profile) => void;
 };
 
-export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
+export function UserDetailForm({ user, profile, onProfileUpdate }: UserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
-  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
-  const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [role, setRole] = useState(profile?.role || "user");
+  const [credit, setCredit] = useState(profile?.credit.toString() || "0");
+  const [monthlyCredit, setMonthlyCredit] = useState(profile?.monthly_credit_allowance.toString() || "0");
+  const [userName, setUserName] = useState(profile?.user_name || "");
+  const [hasUnlimitedCredit, setHasUnlimitedCredit] = useState(profile?.has_unlimited_credit || false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      role: user.role as "user" | "admin",
-      monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
-      has_unlimited_credit: user.has_unlimited_credit ?? false,
-      companyIds: user.user_companies.map((uc) => uc.company_id),
-    },
-  });
-
-  const hasUnlimitedCredit = form.watch("has_unlimited_credit");
-  const watchedCompanyIds = form.watch("companyIds");
-
-  // Derived state for "Select All" checkbox
-  const isAllSelected =
-    allCompanies.length > 0 && watchedCompanyIds.length === allCompanies.length;
-  const isIndeterminate =
-    watchedCompanyIds.length > 0 &&
-    watchedCompanyIds.length < allCompanies.length;
-
-  // Effect to fetch all companies
   useEffect(() => {
-    const fetchAllCompanies = async () => {
-      setIsCompaniesLoading(true);
+    if (profile) {
+      setRole(profile.role);
+      setCredit(profile.credit.toString());
+      setMonthlyCredit(profile.monthly_credit_allowance.toString());
+      setUserName(profile.user_name || "");
+      setHasUnlimitedCredit(profile.has_unlimited_credit);
+    }
+  }, [profile]);
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+
+    const numericCredit = parseFloat(credit);
+    const numericMonthlyCredit = parseFloat(monthlyCredit);
+
+    if (isNaN(numericCredit) || isNaN(numericMonthlyCredit) || numericCredit < 0 || numericMonthlyCredit < 0) {
+      toast.error("Credit values must be non-negative numbers.");
+      setIsUpdating(false);
+      return;
+    }
+
+    try {
       const { data, error } = await supabase
-        .from("companies")
-        .select("id, name")
-        .order("name", { ascending: true });
+        .from("profiles")
+        .update({
+          role,
+          credit: numericCredit,
+          user_name: userName,
+          monthly_credit_allowance: numericMonthlyCredit,
+          has_unlimited_credit: hasUnlimitedCredit,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
+        .select()
+        .single();
 
       if (error) {
-        toast.error("Failed to load all companies.");
-        console.error(error);
-      } else {
-        setAllCompanies(data || []);
+        throw error;
       }
-      setIsCompaniesLoading(false);
-    };
-    fetchAllCompanies();
-  }, [supabase]);
 
-  // Handler for Select All/Deselect All
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      form.setValue(
-        "companyIds",
-        allCompanies.map((c) => c.id),
-        { shouldValidate: true }
-      );
-    } else {
-      form.setValue("companyIds", [], { shouldValidate: true });
+      if (data) {
+        onProfileUpdate(data as Profile);
+        toast.success("User profile updated successfully.");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update user profile.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-
-    try {
-      // --- 1. Update Profile (Role and Credit) ---
-      const updateData: Partial<Profile> = {
-        role: values.role,
-        has_unlimited_credit: values.has_unlimited_credit,
-      };
-
-      if (values.has_unlimited_credit) {
-        updateData.monthly_credit_allowance = 0;
-        updateData.credit = 0;
-      } else {
-        updateData.monthly_credit_allowance = values.monthly_credit_allowance;
-        // Only reset credit if it's currently unlimited or if the allowance increased
-        if (
-          user.has_unlimited_credit ||
-          values.monthly_credit_allowance > (user.monthly_credit_allowance ?? 0)
-        ) {
-          updateData.credit = values.monthly_credit_allowance;
-        }
-      }
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update(updateData)
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
-      // --- 2. Update User Company Associations ---
-      const currentCompanyIds = user.user_companies.map((uc) => uc.company_id);
-      const desiredCompanyIds = values.companyIds;
-
-      const companiesToAdd = desiredCompanyIds.filter(
-        (id) => !currentCompanyIds.includes(id)
-      );
-      const companiesToRemove = currentCompanyIds.filter(
-        (id) => !desiredCompanyIds.includes(id)
-      );
-
-      // Insert new links
-      if (companiesToAdd.length > 0) {
-        const inserts = companiesToAdd.map((company_id) => ({
-          user_id: user.id,
-          company_id,
-        }));
-        const { error: insertError } = await supabase
-          .from("user_companies")
-          .insert(inserts);
-        if (insertError) throw insertError;
-      }
-
-      // Delete removed links
-      if (companiesToRemove.length > 0) {
-        const { error: deleteError } = await supabase
-          .from("user_companies")
-          .delete()
-          .eq("user_id", user.id)
-          .in("company_id", companiesToRemove);
-        if (deleteError) throw deleteError;
-      }
-
-      toast.success("User updated successfully.");
-      onUserUpdated();
-    } catch (error: any) {
-      console.error("Error updating user:", error);
-      toast.error(
-        `Failed to update user: ${error.message || "An unknown error occurred."}`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   return (
-    <>
-      <Card className="h-full">
-        <CardHeader className="border-b p-4">
-          <CardTitle className="text-xl">User Details & Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          {/* Static User Info */}
-          <div className="space-y-3 text-sm border-b pb-6">
-            <p>
-              <span className="font-semibold">Username:</span>{" "}
-              {user.user_name || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Email:</span>{" "}
-              <span className="text-blue-600 underline cursor-pointer">
-                {user.id.split("@")[0] + "@..."}
-              </span>
-            </p>
-            <div className="flex justify-between items-center">
-              <p>
-                <span className="font-semibold">Password:</span> ************
-              </p>
-              <Button
-                variant="link"
-                size="sm"
-                onClick={() => setIsPasswordDialogOpen(true)}
-                className="h-auto p-0 text-primary"
-              >
-                Change
-              </Button>
-            </div>
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>User Details</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4 mb-6">
+          <p className="text-sm">
+            <span className="font-semibold">User ID:</span> {user.id}
+          </p>
+          <p className="text-sm">
+            <span className="font-semibold">Email:</span>{" "}
+            <span className="text-blue-600 underline cursor-pointer">
+              {user.email} {/* Corrected to display actual email */}
+            </span>
+          </p>
+          <p className="text-sm">
+            <span className="font-semibold">Created At:</span>{" "}
+            {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
+          </p>
+        </div>
+
+        <form onSubmit={handleUpdate} className="space-y-4">
+          {/* User Name */}
+          <div className="space-y-2">
+            <Label htmlFor="userName">Display Name</Label>
+            <Input
+              id="userName"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Enter display name"
+            />
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Role Field */}
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* Role */}
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
 
-              {/* Credit Fields */}
-              <div className="space-y-4 border p-4 rounded-md bg-gray-50">
-                <h3 className="font-semibold">Credit Management</h3>
-                <FormField
-                  control={form.control}
-                  name="has_unlimited_credit"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Grant Unlimited Credit</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="monthly_credit_allowance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Monthly Credit Allowance</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="300.00"
-                          {...field}
-                          value={field.value === 0 ? "" : String(field.value)}
-                          disabled={hasUnlimitedCredit || isSubmitting}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Current Remaining Credit:{" "}
-                  <span className="font-medium">
-                    {user.has_unlimited_credit
-                      ? "Unlimited"
-                      : user.credit.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                  </span>
-                </p>
-              </div>
+          {/* Unlimited Credit Toggle */}
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              type="checkbox"
+              id="unlimitedCredit"
+              checked={hasUnlimitedCredit}
+              onChange={(e) => setHasUnlimitedCredit(e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <Label htmlFor="unlimitedCredit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Has Unlimited Credit
+            </Label>
+          </div>
 
-              {/* Company Association Management */}
-              <FormField
-                control={form.control}
-                name="companyIds"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Company Associations</FormLabel>
-                    {/* Select All Checkbox */}
-                    <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
-                      <Checkbox
-                        checked={isAllSelected}
-                        onCheckedChange={handleSelectAll}
-                        disabled={isCompaniesLoading || isSubmitting}
-                        {...(isIndeterminate && { indeterminate: "true" })}
-                      />
-                      <FormLabel className="font-semibold cursor-pointer">
-                        Select All ({watchedCompanyIds.length} /{" "}
-                        {allCompanies.length})
-                      </FormLabel>
-                    </div>
-                    <ScrollArea className="h-[150px] border rounded-md p-4">
-                      {isCompaniesLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-full" />
-                        </div>
-                      ) : allCompanies.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No companies available to assign.
-                        </p>
-                      ) : (
-                        allCompanies.map((company) => (
-                          <FormField
-                            key={company.id}
-                            control={form.control}
-                            name="companyIds"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={company.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 py-1"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(
-                                        company.id
-                                      )}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([
-                                              ...field.value,
-                                              company.id,
-                                            ])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) =>
-                                                  value !== company.id
-                                              )
-                                            );
-                                      }}
-                                      disabled={isSubmitting}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal cursor-pointer">
-                                    {company.name}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))
-                      )}
-                    </ScrollArea>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* Current Credit */}
+          <div className="space-y-2">
+            <Label htmlFor="credit">Current Credit (THB)</Label>
+            <Input
+              id="credit"
+              type="number"
+              step="0.01"
+              value={credit}
+              onChange={(e) => setCredit(e.target.value)}
+              disabled={hasUnlimitedCredit}
+              placeholder="0.00"
+            />
+          </div>
 
-              <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      <ChangePasswordDialog
-        userId={user.id}
-        isOpen={isPasswordDialogOpen}
-        onClose={() => setIsPasswordDialogOpen(false)}
-      />
-    </>
+          {/* Monthly Credit Allowance */}
+          <div className="space-y-2">
+            <Label htmlFor="monthlyCredit">Monthly Credit Allowance (THB)</Label>
+            <Input
+              id="monthlyCredit"
+              type="number"
+              step="0.01"
+              value={monthlyCredit}
+              onChange={(e) => setMonthlyCredit(e.target.value)}
+              disabled={hasUnlimitedCredit}
+              placeholder="0.00"
+            />
+          </div>
+
+          <Button type="submit" disabled={isUpdating} className="w-full">
+            {isUpdating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

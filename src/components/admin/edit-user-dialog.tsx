@@ -69,6 +69,12 @@ export function EditUserDialog({
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      role: "user",
+      monthly_credit_allowance: 0,
+      has_unlimited_credit: false,
+      companyIds: [],
+    },
   });
 
   const hasUnlimitedCredit = form.watch("has_unlimited_credit");

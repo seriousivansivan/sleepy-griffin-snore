@@ -193,19 +193,8 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
           <CardTitle className="text-xl">User Details & Settings</CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          {/* Avatar and Static Info */}
-          <div className="flex flex-col items-center space-y-4 border-b pb-6">
-            {/* Avatar Placeholder */}
-            <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white text-3xl font-bold">
-              {user.user_name ? user.user_name[0] : "U"}
-            </div>
-            <Button variant="outline" size="sm" disabled>
-              Edit Avatar (WIP)
-            </Button>
-          </div>
-
           {/* Static User Info */}
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 text-sm border-b pb-6">
             <p>
               <span className="font-semibold">Username:</span>{" "}
               {user.user_name || "N/A"}

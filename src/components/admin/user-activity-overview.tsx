@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { VoucherList, Voucher } from "@/components/voucher-list";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign } from "lucide-react";

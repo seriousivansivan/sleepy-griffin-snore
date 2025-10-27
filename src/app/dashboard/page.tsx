@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
-import { Settings, RefreshCw } from "lucide-react";
+import { Settings } from "lucide-react";
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
@@ -86,17 +86,6 @@ export default function DashboardPage() {
                 <Settings className="h-4 w-4" />
                 <span className="sr-only">Settings</span>
               </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={fetchVouchers}
-              disabled={vouchersLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${vouchersLoading ? "animate-spin" : ""}`}
-              />
-              <span className="sr-only">Refresh Vouchers</span>
             </Button>
             <Button onClick={handleLogout} variant="outline">
               Logout

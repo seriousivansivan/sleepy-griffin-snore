@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -72,6 +72,19 @@ export function EditUserDialog({
   });
 
   const hasUnlimitedCredit = form.watch("has_unlimited_credit");
+  const selectedCompanyIds = form.watch("companyIds");
+
+  // Derived state for the master checkbox
+  const masterCheckboxState = useMemo(() => {
+    const totalCompanies = allCompanies.length;
+    const selectedCount = selectedCompanyIds.length;
+
+    if (totalCompanies === 0) return { checked: false, indeterminate: false };
+    if (selectedCount === 0) return { checked: false, indeterminate: false };
+    if (selectedCount === totalCompanies)
+      return { checked: true, indeterminate: false };
+    return { checked: false, indeterminate: true };
+  }, [allCompanies, selectedCompanyIds]);
 
   // Effect to fetch all companies
   useEffect(() => {
@@ -107,6 +120,15 @@ export function EditUserDialog({
     }
   }, [user, isOpen, form]);
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = allCompanies.map((c) => c.id);
+      form.setValue("companyIds", allIds, { shouldDirty: true });
+    } else {
+      form.setValue("companyIds", [], { shouldDirty: true });
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
     setIsSubmitting(true);
@@ -124,8 +146,11 @@ export function EditUserDialog({
       } else {
         updateData.monthly_credit_allowance = values.monthly_credit_allowance;
         // Only reset credit if it's currently unlimited or if the allowance increased
-        if (user.has_unlimited_credit || values.monthly_credit_allowance > (user.monthly_credit_allowance ?? 0)) {
-            updateData.credit = values.monthly_credit_allowance;
+        if (
+          user.has_unlimited_credit ||
+          values.monthly_credit_allowance > (user.monthly_credit_allowance ?? 0)
+        ) {
+          updateData.credit = values.monthly_credit_allowance;
         }
       }
 
@@ -174,7 +199,9 @@ export function EditUserDialog({
       onClose();
     } catch (error: any) {
       console.error("Error updating user:", error);
-      toast.error(`Failed to update user: ${error.message || "An unknown error occurred."}`);
+      toast.error(
+        `Failed to update user: ${error.message || "An unknown error occurred."}`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -243,7 +270,9 @@ export function EditUserDialog({
                       placeholder="300.00"
                       {...field}
                       disabled={hasUnlimitedCredit || isSubmitting}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value))
+                      }
                     />
                   </FormControl>
                   <FormMessage />
@@ -258,6 +287,22 @@ export function EditUserDialog({
               render={() => (
                 <FormItem>
                   <FormLabel>Company Associations</FormLabel>
+                  <div className="flex flex-row items-center space-x-3 space-y-0 rounded-md border-b p-3">
+                    <Checkbox
+                      checked={masterCheckboxState.checked}
+                      onCheckedChange={(checked) =>
+                        handleSelectAll(!!checked)
+                      }
+                      disabled={isSubmitting || isCompaniesLoading || allCompanies.length === 0}
+                      // @ts-ignore - Radix Checkbox supports indeterminate state
+                      indeterminate={masterCheckboxState.indeterminate}
+                    />
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="font-semibold cursor-pointer">
+                        Select All Companies ({selectedCompanyIds.length}/{allCompanies.length})
+                      </FormLabel>
+                    </div>
+                  </div>
                   <ScrollArea className="h-[150px] border rounded-md p-4">
                     {isCompaniesLoading ? (
                       <div className="space-y-2">
@@ -266,7 +311,9 @@ export function EditUserDialog({
                         <Skeleton className="h-4 w-full" />
                       </div>
                     ) : allCompanies.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No companies available to assign.</p>
+                      <p className="text-sm text-muted-foreground">
+                        No companies available to assign.
+                      </p>
                     ) : (
                       allCompanies.map((company) => (
                         <FormField
@@ -313,7 +360,12 @@ export function EditUserDialog({
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>

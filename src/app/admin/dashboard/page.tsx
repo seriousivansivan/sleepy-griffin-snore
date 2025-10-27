@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { StatCard } from "@/components/admin/stat-card";
-import { Users, Building, Ticket } from "lucide-react";
+import { Users, Building, Ticket, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type Stats = {
   users: number;
@@ -48,7 +50,15 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/dashboard">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to User Dashboard
+          </Link>
+        </Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Users"

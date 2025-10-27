@@ -11,9 +11,9 @@ export const downloadVoucherAsPdf = async (voucher: Voucher): Promise<void> => {
   // 1. Create a temporary container for rendering the voucher off-screen
   const container = document.createElement("div");
   container.style.position = "absolute";
-  container.style.left = "-9999px"; // Position it far off the left
+  container.style.left = "-9999px";
   container.style.top = "0px";
-  // Set a fixed width corresponding to A5 paper aspect ratio to ensure consistent layout
+  // A5 paper width in pixels at 96 DPI is approx 559px. This helps with consistent rendering.
   container.style.width = "559px";
   document.body.appendChild(container);
 
@@ -21,17 +21,17 @@ export const downloadVoucherAsPdf = async (voucher: Voucher): Promise<void> => {
   const root = createRoot(container);
   root.render(React.createElement(PrintableVoucher, { voucher }));
 
-  // 3. Wait a moment for the component and any images (like logos) to render fully
+  // 3. Wait a moment for the component and any images to render fully
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   // 4. Use html2canvas to capture the rendered component as a high-quality image
   const canvas = await html2canvas(container, {
-    scale: 3, // Use a higher scale for better resolution in the PDF
-    useCORS: true, // This is crucial for loading external images like company logos
+    scale: 3, // Higher scale for better resolution
+    useCORS: true,
     logging: false,
   });
 
-  // 5. Clean up the DOM by removing our temporary container
+  // 5. Clean up the DOM
   root.unmount();
   document.body.removeChild(container);
 
@@ -40,14 +40,15 @@ export const downloadVoucherAsPdf = async (voucher: Voucher): Promise<void> => {
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
-    format: "a5", // A5 format is 148x210 mm
+    format: "a5", // A5 format: 148mm x 210mm
   });
 
   const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const canvasAspectRatio = canvas.height / canvas.width;
+  const calculatedPdfHeight = pdfWidth * canvasAspectRatio;
 
-  // Add the captured image to the PDF, making it fit the page
-  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+  // Add the image, fitting it to the width of the page and calculating height to maintain aspect ratio
+  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, calculatedPdfHeight);
 
   // 7. Trigger the browser to download the generated PDF
   const safePayTo = voucher.details.payTo.replace(/[^a-zA-Z0-9]/g, "_");

@@ -17,9 +17,10 @@ export default function AdminVoucherOverviewPage() {
     setIsLoading(true);
     try {
       // Admins have RLS access to view all vouchers
+      // Fetch profiles(user_name) along with companies
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url)`)
+        .select(`*, companies(name, logo_url), profiles(user_name)`)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -58,6 +59,7 @@ export default function AdminVoucherOverviewPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
+        showUserColumn={true} // Explicitly show the user column for admin view
       />
     </div>
   );

@@ -49,10 +49,12 @@ type VoucherDetails = {
 
 export type Voucher = {
   id: number;
+  user_id: string; // Added user_id
   total_amount: number;
   details: VoucherDetails;
   created_at: string;
-  companies: { name: string; logo_url: string | null } | null; // UPDATED: Added logo_url
+  companies: { name: string; logo_url: string | null } | null;
+  profiles: { user_name: string | null } | null; // Added profiles for user name
 };
 
 type VoucherListProps = {
@@ -61,6 +63,7 @@ type VoucherListProps = {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  showUserColumn?: boolean; // New prop to conditionally show the user column
 };
 
 const VOUCHERS_PER_PAGE = 10;
@@ -71,6 +74,7 @@ export function VoucherList({
   currentPage,
   totalPages,
   onPageChange,
+  showUserColumn = false,
 }: VoucherListProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -206,6 +210,7 @@ export function VoucherList({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {showUserColumn && <TableHead>Created By</TableHead>}
                     <TableHead>Company</TableHead>
                     <TableHead>Pay To</TableHead>
                     <TableHead>Date</TableHead>
@@ -217,6 +222,11 @@ export function VoucherList({
                 <TableBody>
                   {currentVouchers.map((voucher) => (
                     <TableRow key={voucher.id}>
+                      {showUserColumn && (
+                        <TableCell>
+                          {voucher.profiles?.user_name || "N/A"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant="outline">
                           {voucher.companies?.name || "N/A"}

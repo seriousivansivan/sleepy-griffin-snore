@@ -30,18 +30,29 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
             <TableRow>
               <TableHead>User Name</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead className="text-right">Credit</TableHead>
+              <TableHead className="text-right">Monthly Allowance</TableHead>
+              <TableHead className="text-right">Remaining Credit</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.user_name || "N/A"}</TableCell>
+                <TableCell className="font-medium">
+                  {user.user_name || "N/A"}
+                </TableCell>
                 <TableCell>
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                  <Badge
+                    variant={user.role === "admin" ? "default" : "secondary"}
+                  >
                     {user.role}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {user.monthly_credit_allowance.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </TableCell>
                 <TableCell className="text-right">
                   {user.credit.toLocaleString(undefined, {
@@ -50,7 +61,11 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
                   })}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => setEditingUser(user)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingUser(user)}
+                  >
                     Edit
                   </Button>
                 </TableCell>

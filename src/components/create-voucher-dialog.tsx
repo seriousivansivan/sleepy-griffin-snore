@@ -69,7 +69,7 @@ type CreateVoucherDialogProps = {
 export function CreateVoucherDialog({
   onVoucherCreated,
 }: CreateVoucherDialogProps) {
-  const { supabase, session, profile } = useSupabaseAuth();
+  const { supabase, session, profile, refreshProfile } = useSupabaseAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -119,30 +119,43 @@ export function CreateVoucherDialog({
     if (!session) return;
     setIsSubmitting(true);
 
-    const { companyId, ...details } = values;
-    const calculatedTotalAmount = details.items.reduce(
+    const calculatedTotalAmount = values.items.reduce(
       (sum, item) => sum + item.amount,
       0
     );
 
+    if (profile && profile.credit < calculatedTotalAmount) {
+      toast.error("Insufficient credit to create this voucher.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      const { error } = await supabase.from("vouchers").insert({
-        user_id: session.user.id,
-        company_id: companyId,
-        total_amount: calculatedTotalAmount,
-        details: {
-          payTo: details.payTo,
-          date: format(details.date, "yyyy-MM-dd"),
-          items: details.items,
-        },
-      });
+      const { data, error } = await supabase.rpc(
+        "create_voucher_and_deduct_credit",
+        {
+          p_user_id: session.user.id,
+          p_company_id: values.companyId,
+          p_total_amount: calculatedTotalAmount,
+          p_details: {
+            payTo: values.payTo,
+            date: format(values.date, "yyyy-MM-dd"),
+            items: values.items,
+          },
+        }
+      );
 
       if (error) throw error;
 
-      toast.success("Voucher created successfully!");
-      onVoucherCreated();
-      setIsOpen(false);
-      form.reset();
+      if (data.success) {
+        toast.success(data.message);
+        await refreshProfile(); // Refresh profile to get updated credit
+        onVoucherCreated();
+        setIsOpen(false);
+        form.reset();
+      } else {
+        toast.error(data.message || "An unknown error occurred.");
+      }
     } catch (error) {
       console.error("Error creating voucher:", error);
       toast.error("Failed to create voucher. Please try again.");

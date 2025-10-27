@@ -9,6 +9,7 @@ export type Profile = {
   id: string;
   user_name: string | null;
   role: string;
+  monthly_credit_allowance: number;
   credit: number;
   updated_at: string;
   user_companies: { company_id: string }[];

@@ -34,7 +34,9 @@ import type { Profile } from "@/components/providers/supabase-auth-provider";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
-  credit: z.coerce.number().min(0, "Credit cannot be negative."),
+  monthly_credit_allowance: z.coerce
+    .number()
+    .min(0, "Allowance cannot be negative."),
 });
 
 type EditUserDialogProps = {
@@ -60,7 +62,7 @@ export function EditUserDialog({
     if (user) {
       form.reset({
         role: user.role as "user" | "admin",
-        credit: user.credit,
+        monthly_credit_allowance: user.monthly_credit_allowance,
       });
     }
   }, [user, form]);
@@ -72,7 +74,7 @@ export function EditUserDialog({
       .from("profiles")
       .update({
         role: values.role,
-        credit: values.credit,
+        monthly_credit_allowance: values.monthly_credit_allowance,
       })
       .eq("id", user.id);
 
@@ -99,7 +101,10 @@ export function EditUserDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -116,17 +121,31 @@ export function EditUserDialog({
             />
             <FormField
               control={form.control}
-              name="credit"
+              name="monthly_credit_allowance"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Credit</FormLabel>
+                  <FormLabel>Monthly Credit Allowance</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0.00" {...field} />
+                    <Input type="number" placeholder="300.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            <FormItem>
+              <FormLabel>Current Remaining Credit</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={user?.credit.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                />
+              </FormControl>
+            </FormItem>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel

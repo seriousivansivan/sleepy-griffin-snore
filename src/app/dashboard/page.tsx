@@ -79,6 +79,15 @@ export default function DashboardPage() {
             <p className="text-gray-600 mt-1">
               Welcome back, {profile.user_name}.
             </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Remaining Credit:{" "}
+              <span className="font-semibold text-gray-700">
+                {profile.credit.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {profile.role === "admin" && (

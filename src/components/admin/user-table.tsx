@@ -49,13 +49,16 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {user.monthly_credit_allowance.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {(user.monthly_credit_allowance ?? 0).toLocaleString(
+                    undefined,
+                    {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {user.credit.toLocaleString(undefined, {
+                  {(user.credit ?? 0).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}

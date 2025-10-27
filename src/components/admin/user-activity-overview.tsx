@@ -6,7 +6,10 @@ import { VoucherList, Voucher } from "@/components/voucher-list";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IndianRupee } from "lucide-react";
 import { VoucherCompanyDistributionChart } from "./voucher-company-distribution-chart";
+import { TimeFilter, TimeRange, calculateDateRange } from "./time-filter"; // Import new components
+import { formatISO } from "date-fns";
 
 type UserActivityOverviewProps = {
   userId: string;
@@ -24,14 +27,26 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [vouchersLoading, setVouchersLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterRange, setFilterRange] = useState<TimeRange>("all"); // New state for filter
 
-  const fetchVouchers = useCallback(async () => {
+  const fetchVouchers = useCallback(async (range: TimeRange) => {
     setVouchersLoading(true);
+    
+    const { start, end } = calculateDateRange(range);
+    
+    // Format dates to ISO strings for PostgreSQL TIMESTAMP WITH TIME ZONE
+    const p_start_date = start ? formatISO(start) : null;
+    const p_end_date = end ? formatISO(end) : null;
+
     try {
       // 1. Fetch raw voucher data using the RPC function (bypasses RLS for admin)
       const { data: rawVouchers, error: rpcError } = await supabase.rpc(
         "get_vouchers_by_user_id_for_admin",
-        { p_user_id: userId }
+        { 
+          p_user_id: userId,
+          p_start_date: p_start_date,
+          p_end_date: p_end_date,
+        }
       );
 
       if (rpcError) {
@@ -90,8 +105,9 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
   }, [supabase, userId, userName]);
 
   useEffect(() => {
-    fetchVouchers();
-  }, [fetchVouchers]);
+    // Refetch data whenever the filter range changes
+    fetchVouchers(filterRange);
+  }, [fetchVouchers, filterRange]);
 
   const totalPages = Math.ceil(vouchers.length / 10); // Assuming 10 VOUCHERS_PER_PAGE
 
@@ -106,6 +122,11 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
 
   return (
     <div className="space-y-6 h-full">
+      {/* Filter Header */}
+      <div className="flex justify-end">
+        <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
+      </div>
+
       {/* Chart Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>

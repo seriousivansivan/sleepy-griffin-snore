@@ -1,8 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm } from "react-hook-form";
-import * as z from "zod";
+import { z } from "zod";
+import { CalendarIcon, PlusCircle, XCircle } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,21 +33,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { createClient } from "@/integrations/supabase/client";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { ScrollArea } from "./ui/scroll-area";
 
-const voucherItemSchema = z.object({
+const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
-  quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-  rate: z.coerce.number().min(0, "Rate cannot be negative."),
+  amount: z.coerce.number().positive({ message: "Amount must be positive." }),
 });
 
 const formSchema = z.object({
-  companyId: z.string().min(1, "Please select a company."),
-  items: z.array(voucherItemSchema).min(1, "Please add at least one item."),
+  companyId: z.string({ required_error: "Please select a company." }),
+  payTo: z
+    .string()
+    .min(2, { message: "Payee name must be at least 2 characters." }),
+  date: z.date({ required_error: "A date is required." }),
+  items: z.array(itemSchema).min(1, "At least one item is required."),
 });
 
 type Company = {
@@ -51,31 +62,24 @@ type Company = {
   name: string;
 };
 
-export function CreateVoucherDialog() {
-  const [open, setOpen] = useState(false);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const supabase = createClient();
+type CreateVoucherDialogProps = {
+  onVoucherCreated: () => void;
+};
 
-  useEffect(() => {
-    async function fetchCompanies() {
-      const { data, error } = await supabase.from("companies").select("id, name");
-      if (error) {
-        toast.error("Failed to fetch companies.");
-        console.error(error);
-      } else if (data) {
-        setCompanies(data);
-      }
-    }
-    if (open) {
-      fetchCompanies();
-    }
-  }, [open, supabase]);
+export function CreateVoucherDialog({
+  onVoucherCreated,
+}: CreateVoucherDialogProps) {
+  const { supabase, session, profile, refreshProfile } = useSupabaseAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyId: "",
-      items: [{ particulars: "", quantity: 1, rate: 0 }],
+      payTo: "",
+      date: new Date(),
+      items: [{ particulars: "", amount: 0 }],
     },
   });
 
@@ -84,147 +88,242 @@ export function CreateVoucherDialog() {
     name: "items",
   });
 
-  const watchItems = form.watch("items");
-  const totalAmount = watchItems.reduce((acc, item) => {
-    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-    const rate = typeof item.rate === 'number' ? item.rate : 0;
-    return acc + quantity * rate;
-  }, 0);
+  const watchedItems = useWatch({
+    control: form.control,
+    name: "items",
+  });
+
+  const totalAmount = watchedItems.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!session || !isOpen) return;
+      const companyIds =
+        profile?.user_companies.map((uc) => uc.company_id) || [];
+      if (companyIds.length === 0) return;
+
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds);
+      if (error) toast.error("Could not load your companies.");
+      else setCompanies(data || []);
+    };
+    fetchCompanies();
+  }, [isOpen, session, supabase, profile]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        toast.error("You must be logged in to create a voucher.");
-        return;
+    if (!session) return;
+    setIsSubmitting(true);
+
+    const calculatedTotalAmount = values.items.reduce(
+      (sum, item) => sum + item.amount,
+      0
+    );
+
+    if (
+      profile &&
+      !profile.has_unlimited_credit &&
+      profile.credit < calculatedTotalAmount
+    ) {
+      toast.error("Insufficient credit to create this voucher.");
+      setIsSubmitting(false);
+      return;
     }
 
-    const voucherDetails = {
-        items: values.items,
-        totalAmount: totalAmount,
-    };
+    try {
+      const { data, error } = await supabase.rpc(
+        "create_voucher_and_deduct_credit",
+        {
+          p_user_id: session.user.id,
+          p_company_id: values.companyId,
+          p_total_amount: calculatedTotalAmount,
+          p_details: {
+            payTo: values.payTo,
+            date: format(values.date, "yyyy-MM-dd"),
+            items: values.items,
+          },
+        }
+      );
 
-    const { data, error } = await supabase.rpc('create_voucher_and_deduct_credit', {
-        p_user_id: user.id,
-        p_company_id: values.companyId,
-        p_total_amount: totalAmount,
-        p_details: voucherDetails,
-    });
+      if (error) throw error;
 
-    if (error) {
-      toast.error(`Failed to create voucher: ${error.message}`);
-      console.error(error);
-    } else if (data && !data.success) {
-      toast.error(data.message || "An error occurred while creating the voucher.");
-    } 
-    else {
-      toast.success("Voucher created successfully!");
-      form.reset();
-      setOpen(false);
+      if (data.success) {
+        toast.success(data.message);
+        await refreshProfile(); // Refresh profile to get updated credit
+        onVoucherCreated();
+        setIsOpen(false);
+        form.reset();
+      } else {
+        toast.error(data.message || "An unknown error occurred.");
+      }
+    } catch (error) {
+      console.error("Error creating voucher:", error);
+      toast.error("Failed to create voucher. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>Create Voucher</Button>
+        <Button>Create New Voucher</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[625px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create New Voucher</DialogTitle>
           <DialogDescription>
-            Fill in the details below to create a new voucher.
+            Fill in the details below. You can add multiple items to a single
+            voucher.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="companyId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="companyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="payTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pay To</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a company" />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="e.g. Office Supplies Inc."
+                        {...field}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div>
-              <FormLabel>Voucher Items</FormLabel>
-              <div className="space-y-2 mt-2 max-h-60 overflow-y-auto pr-2">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2 p-2 border rounded-md">
-                    <div className="grid grid-cols-12 gap-2 flex-1">
+              <FormLabel>Items</FormLabel>
+              <ScrollArea className="h-[200px] mt-2 p-1 border rounded-md">
+                <div className="space-y-3 pr-4">
+                  {fields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="flex items-start gap-2"
+                    >
                       <FormField
                         control={form.control}
                         name={`items.${index}.particulars`}
                         render={({ field }) => (
-                          <FormItem className="col-span-6">
+                          <FormItem className="flex-1">
                             <FormControl>
-                              <Textarea placeholder="Particulars" {...field} className="h-20"/>
+                              <Input placeholder="Particulars" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <div className="col-span-6 space-y-2">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.quantity`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input type="number" placeholder="Qty" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.rate`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input type="number" placeholder="Rate" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.amount`}
+                        render={({ field }) => (
+                          <FormItem className="w-32">
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Amount"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        disabled={fields.length <= 1}
+                        className="mt-1"
+                      >
+                        <XCircle className="h-5 w-5 text-red-500" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => remove(index)}
-                      disabled={fields.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="mt-2"
-                onClick={() => append({ particulars: "", quantity: 1, rate: 0 })}
+                onClick={() => append({ particulars: "", amount: 0 })}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Item
@@ -232,13 +331,16 @@ export function CreateVoucherDialog() {
             </div>
 
             <div className="text-right font-bold text-lg">
-              Total: {totalAmount.toFixed(2)}
+              Total:{" "}
+              {totalAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Creating..." : "Create Voucher"}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Voucher"}
               </Button>
             </DialogFooter>
           </form>

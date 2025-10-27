@@ -34,6 +34,7 @@ import type { Profile } from "@/components/providers/supabase-auth-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Lock } from "lucide-react";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
@@ -66,6 +67,7 @@ export function EditUserDialog({
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -213,158 +215,318 @@ export function EditUserDialog({
   }
 
   return (
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User: {user?.user_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* User Details */}
+            <div className="border rounded-md p-4 space-y-2 bg-muted/50">
+              <p className="text-sm font-medium">
+                Email:{" "}
+                <span className="font-normal text-muted-foreground">
+                  {user?.id ? user.id.split("@")[0] + "@..." : "N/A"}
+                </span>
+              </p>
+              <p className="text-sm font-medium">
+                User ID:{" "}
+                <span className="font-normal text-muted-foreground text-xs break-all">
+                  {user?.id || "N/A"}
+                </span>
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsPasswordDialogOpen(true)}
+                className="mt-2"
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Change Password
+              </Button>
+            </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="has_unlimited_credit"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Grant Unlimited Credit</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="monthly_credit_allowance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monthly Credit Allowance</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="300.00"
+                          {...field}
+                          // FIX: Ensure the value passed to the input is a string.
+                          // Use empty string for 0 to allow placeholder visibility and easier input.
+                          value={field.value === 0 ? "" : String(field.value)}
+                          disabled={hasUnlimitedCredit || isSubmitting}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Company Association Management */}
+                <FormField
+                  control={form.control}
+                  name="companyIds"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Company Associations</FormLabel>
+                      {/* Select All Checkbox */}
+                      <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={handleSelectAll}
+                          disabled={isCompaniesLoading || isSubmitting}
+                          // Pass the indeterminate prop as a string when true, as suggested by the console error
+                          {...(isIndeterminate && { indeterminate: "true" })}
+                        />
+                        <FormLabel className="font-semibold cursor-pointer">
+                          Select All ({watchedCompanyIds.length} /{" "}
+                          {allCompanies.length})
+                        </FormLabel>
+                      </div>
+                      <ScrollArea className="h-[150px] border rounded-md p-4">
+                        {isCompaniesLoading ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                          </div>
+                        ) : allCompanies.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No companies available to assign.
+                          </p>
+                        ) : (
+                          allCompanies.map((company) => (
+                            <FormField
+                              key={company.id}
+                              control={form.control}
+                              name="companyIds"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={company.id}
+                                    className="flex flex-row items-start space-x-3 space-y-0 py-1"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(
+                                          company.id
+                                        )}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([
+                                                ...field.value,
+                                                company.id,
+                                              ])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) =>
+                                                    value !== company.id
+                                                )
+                                              );
+                                        }}
+                                        disabled={isSubmitting}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal cursor-pointer">
+                                      {company.name}
+                                    </FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))
+                        )}
+                      </ScrollArea>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {user && (
+        <ChangePasswordDialog
+          userId={user.id}
+          isOpen={isPasswordDialogOpen}
+          onClose={() => setIsPasswordDialogOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// --- New Component: ChangePasswordDialog ---
+
+const passwordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters."),
+});
+
+type ChangePasswordDialogProps = {
+  userId: string;
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+function ChangePasswordDialog({
+  userId,
+  isOpen,
+  onClose,
+}: ChangePasswordDialogProps) {
+  const { supabase } = useSupabaseAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      password: "",
+    },
+  });
+
+  const handlePasswordChange = async (
+    values: z.infer<typeof passwordSchema>
+  ) => {
+    setIsSubmitting(true);
+    try {
+      // Note: Admin changing another user's password requires the Service Role Key
+      // or a specific policy/function. Since we are using the client-side Supabase
+      // client (which uses the Anon Key), we must use the `admin.updateUserById`
+      // method via a Server Action or Edge Function for security.
+
+      // Since we cannot directly use the Service Role Key client-side,
+      // we will use a simple Edge Function to perform the admin update securely.
+      
+      // For now, I will implement the client-side call assuming a secure backend
+      // mechanism (like an Edge Function) is used, but since I cannot create
+      // a full Edge Function implementation without knowing the deployment URL,
+      // I will simulate the call and provide the necessary Edge Function code
+      // for the user to deploy.
+
+      // *** IMPORTANT: This client-side call is a placeholder for a secure backend call. ***
+      // We will use a dedicated Edge Function for this.
+
+      const { error } = await supabase.functions.invoke('admin-update-user-password', {
+        body: {
+          userId: userId,
+          newPassword: values.password,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Password updated successfully!");
+      onClose();
+      form.reset();
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      toast.error(
+        `Failed to change password: ${error.message || "An unknown error occurred."}`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit User: {user?.user_name}</DialogTitle>
+          <DialogTitle>Change User Password</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handlePasswordChange)} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter a new password for this user. This action is performed with
+              administrative privileges.
+            </p>
             <FormField
               control={form.control}
-              name="role"
+              name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="has_unlimited_credit"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                  <FormLabel>New Password</FormLabel>
                   <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      {...field}
                       disabled={isSubmitting}
                     />
                   </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Grant Unlimited Credit</FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="monthly_credit_allowance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Monthly Credit Allowance</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="300.00"
-                      {...field}
-                      // FIX: Ensure the value passed to the input is a string.
-                      // Use empty string for 0 to allow placeholder visibility and easier input.
-                      value={field.value === 0 ? "" : String(field.value)}
-                      disabled={hasUnlimitedCredit || isSubmitting}
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value))
-                      }
-                    />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            {/* Company Association Management */}
-            <FormField
-              control={form.control}
-              name="companyIds"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Company Associations</FormLabel>
-                  {/* Select All Checkbox */}
-                  <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
-                    <Checkbox
-                      checked={isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                      disabled={isCompaniesLoading || isSubmitting}
-                      // Pass the indeterminate prop as a string when true, as suggested by the console error
-                      {...(isIndeterminate && { indeterminate: "true" })}
-                    />
-                    <FormLabel className="font-semibold cursor-pointer">
-                      Select All ({watchedCompanyIds.length} /{" "}
-                      {allCompanies.length})
-                    </FormLabel>
-                  </div>
-                  <ScrollArea className="h-[150px] border rounded-md p-4">
-                    {isCompaniesLoading ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                      </div>
-                    ) : allCompanies.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No companies available to assign.
-                      </p>
-                    ) : (
-                      allCompanies.map((company) => (
-                        <FormField
-                          key={company.id}
-                          control={form.control}
-                          name="companyIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={company.id}
-                                className="flex flex-row items-start space-x-3 space-y-0 py-1"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(company.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([
-                                            ...field.value,
-                                            company.id,
-                                          ])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== company.id
-                                            )
-                                          );
-                                    }}
-                                    disabled={isSubmitting}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal cursor-pointer">
-                                  {company.name}
-                                </FormLabel>
-                              </FormItem>
-                            );
-                          }}
-                        />
-                      ))
-                    )}
-                  </ScrollArea>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <DialogFooter>
               <Button
                 type="button"
@@ -375,7 +537,7 @@ export function EditUserDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                {isSubmitting ? "Updating..." : "Update Password"}
               </Button>
             </DialogFooter>
           </form>

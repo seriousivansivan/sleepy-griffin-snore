@@ -16,12 +16,11 @@ export default function AdminVoucherOverviewPage() {
   const fetchAllVouchers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Admins have RLS access to view all vouchers
-      // Fetch profiles(user_name) along with companies.
-      // The join is implicitly made via the user_id foreign key.
+      // Use explicit foreign key syntax (table!fk_column) to ensure the join works correctly.
+      // The user_id column in 'vouchers' links to 'profiles'.
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`user_id, total_amount, details, created_at, id, companies(name, logo_url), profiles(user_name)`)
+        .select(`*, companies(name, logo_url), profiles!user_id(user_name)`)
         .order("created_at", { ascending: false });
 
       if (error) {

@@ -17,10 +17,11 @@ export default function AdminVoucherOverviewPage() {
     setIsLoading(true);
     try {
       // Admins have RLS access to view all vouchers
-      // Fetch profiles(user_name) along with companies
+      // Fetch profiles(user_name) along with companies.
+      // The join is implicitly made via the user_id foreign key.
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url), profiles(user_name)`)
+        .select(`user_id, total_amount, details, created_at, id, companies(name, logo_url), profiles(user_name)`)
         .order("created_at", { ascending: false });
 
       if (error) {

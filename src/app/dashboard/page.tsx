@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { Settings, Shield } from "lucide-react";
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
@@ -81,6 +81,14 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {profile.role === "admin" && (
+              <Button variant="outline" asChild>
+                <Link href="/admin/dashboard">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin Panel
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" size="icon" asChild>
               <Link href="/dashboard/settings">
                 <Settings className="h-4 w-4" />

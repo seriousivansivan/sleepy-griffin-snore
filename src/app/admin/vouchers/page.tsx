@@ -16,16 +16,19 @@ export default function AdminVoucherOverviewPage() {
   const fetchAllVouchers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Use explicit foreign key syntax (table!fk_column) to ensure the join works correctly.
-      // The user_id column in 'vouchers' links to 'profiles'.
+      // Use the explicit foreign key constraint name ('vouchers_user_id_fkey') for the join.
+      // This is the most robust way to ensure the join works correctly and should resolve the 400 error.
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url), profiles!user_id(user_name)`)
+        .select(
+          `*, companies(name, logo_url), profiles!vouchers_user_id_fkey(user_name)`
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
         throw error;
       }
+
       setVouchers(data || []);
       setCurrentPage(1); // Reset to page 1 after fetching new data
     } catch (error) {

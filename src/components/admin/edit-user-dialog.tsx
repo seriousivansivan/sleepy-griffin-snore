@@ -299,7 +299,7 @@ export function EditUserDialog({
                       onCheckedChange={handleSelectAll}
                       disabled={isCompaniesLoading || isSubmitting}
                       // Conditionally pass indeterminate prop only when true
-                      {...(isIndeterminate && { indeterminate: true })}
+                      {...(isIndeterminate ? { indeterminate: true } : {})}
                     />
                     <FormLabel className="font-semibold cursor-pointer">
                       Select All ({watchedCompanyIds.length} /{" "}

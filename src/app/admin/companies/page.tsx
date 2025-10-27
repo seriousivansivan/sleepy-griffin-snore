@@ -42,7 +42,7 @@ export default function CompanyManagementPage() {
   }, [fetchCompanies]);
 
   return (
-    <div>
+    <div className="animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Company Management</h1>
         <Button onClick={() => setIsAddDialogOpen(true)}>Add New Company</Button>

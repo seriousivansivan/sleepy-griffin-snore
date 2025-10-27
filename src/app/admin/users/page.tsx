@@ -31,7 +31,7 @@ export default function UserManagementPage() {
   }, [fetchUsers]);
 
   return (
-    <div>
+    <div className="animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold mb-6">User Management</h1>
       {isLoading ? (
         <div className="space-y-2">

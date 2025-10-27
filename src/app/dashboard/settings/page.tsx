@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">
           Company Settings
         </h1>

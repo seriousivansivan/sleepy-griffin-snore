@@ -103,7 +103,7 @@ export default function AdminVoucherOverviewPage() {
   };
 
   return (
-    <div>
+    <div className="animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold mb-6">Voucher Overview</h1>
       <VoucherList
         vouchers={vouchers}

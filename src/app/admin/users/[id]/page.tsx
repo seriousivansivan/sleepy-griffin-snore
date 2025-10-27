@@ -81,7 +81,7 @@ export default function UserDetailPage() {
   }
 
   return (
-    <>
+    <div className="animate-in fade-in duration-500">
       {/* Header (Back button and Title) */}
       <div className="flex items-center mb-6">
         <Button variant="ghost" onClick={() => router.back()} className="mr-4">
@@ -103,6 +103,6 @@ export default function UserDetailPage() {
           <UserActivityOverview userId={user.id} userName={user.user_name} />
         </div>
       </div>
-    </>
+    </div>
   );
 }

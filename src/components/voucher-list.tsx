@@ -52,7 +52,8 @@ export type Voucher = {
   total_amount: number;
   details: VoucherDetails;
   created_at: string;
-  companies: { name: string; logo_url: string | null } | null; // UPDATED: Added logo_url
+  companies: { name: string; logo_url: string | null } | null;
+  user_id: { user_name: string | null } | null; // Added for creator name
 };
 
 type VoucherListProps = {
@@ -206,6 +207,7 @@ export function VoucherList({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Created By</TableHead>
                     <TableHead>Company</TableHead>
                     <TableHead>Pay To</TableHead>
                     <TableHead>Date</TableHead>
@@ -217,6 +219,9 @@ export function VoucherList({
                 <TableBody>
                   {currentVouchers.map((voucher) => (
                     <TableRow key={voucher.id}>
+                      <TableCell className="font-medium">
+                        {voucher.user_id?.user_name || "N/A"}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {voucher.companies?.name || "N/A"}

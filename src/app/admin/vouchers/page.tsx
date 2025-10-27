@@ -17,9 +17,10 @@ export default function AdminVoucherOverviewPage() {
     setIsLoading(true);
     try {
       // Admins have RLS access to view all vouchers
+      // Fetching user_id(user_name) to get the creator's name via the new foreign key relationship
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url)`)
+        .select(`*, companies(name, logo_url), user_id(user_name)`)
         .order("created_at", { ascending: false });
 
       if (error) {

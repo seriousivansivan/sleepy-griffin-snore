@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUserEmail } from "@/hooks/use-user-email"; // Import the new hook
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
@@ -52,6 +53,7 @@ type UserDetailFormProps = {
 
 export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
+  const { email, isLoading: isEmailLoading } = useUserEmail(user.id); // Use the new hook
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -201,8 +203,12 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
             </p>
             <p>
               <span className="font-semibold">Email:</span>{" "}
-              <span className="text-blue-600 underline cursor-pointer">
-                {user.id.split("@")[0] + "@..."}
+              <span className="text-gray-700">
+                {isEmailLoading ? (
+                  <Skeleton className="h-4 w-48 inline-block" />
+                ) : (
+                  email || "N/A"
+                )}
               </span>
             </p>
             <div className="flex justify-between items-center">

@@ -298,8 +298,8 @@ export function EditUserDialog({
                       checked={isAllSelected}
                       onCheckedChange={handleSelectAll}
                       disabled={isCompaniesLoading || isSubmitting}
-                      // @ts-ignore - Radix Checkbox supports indeterminate state
-                      indeterminate={isIndeterminate}
+                      // Conditionally pass indeterminate prop only when true
+                      {...(isIndeterminate && { indeterminate: true })}
                     />
                     <FormLabel className="font-semibold cursor-pointer">
                       Select All ({watchedCompanyIds.length} /{" "}

@@ -88,7 +88,10 @@ export function EditCompanyDialog({
           const storagePath = `logos/${company.id}.${fileExtension}`;
           const publicUrl = await uploadFileAndGetUrl(file, LOGO_BUCKET, storagePath);
           if (!publicUrl) throw new Error("Logo upload failed.");
-          logoUrl = publicUrl;
+          
+          // Add a cache-busting timestamp to the URL to force browser refresh
+          const cacheBuster = new Date().getTime();
+          logoUrl = `${publicUrl}?v=${cacheBuster}`;
         }
 
         const { error } = await supabase
@@ -121,10 +124,11 @@ export function EditCompanyDialog({
             throw new Error("Company created, but logo upload failed. Please edit the company to re-upload the logo.");
           }
 
-          // 3. Update the new record with the logo URL
+          // 3. Update the new record with the logo URL, including cache buster
+          const cacheBuster = new Date().getTime();
           const { error: updateError } = await supabase
             .from("companies")
-            .update({ logo_url: publicUrl })
+            .update({ logo_url: `${publicUrl}?v=${cacheBuster}` })
             .eq("id", newCompanyId);
 
           if (updateError) throw updateError;

@@ -56,10 +56,13 @@ export function CompanyLogoUploader({
     );
 
     if (publicUrl) {
+      // Add a cache-busting timestamp to the URL to force browser refresh
+      const cacheBusterUrl = `${publicUrl}?v=${new Date().getTime()}`;
+
       // Update the company record in the database with the new URL
       const { error: dbError } = await supabase
         .from("companies")
-        .update({ logo_url: publicUrl })
+        .update({ logo_url: cacheBusterUrl })
         .eq("id", companyId);
 
       if (dbError) {
@@ -67,7 +70,7 @@ export function CompanyLogoUploader({
         toast.error("Failed to save logo URL to database.");
       } else {
         toast.success("Company logo updated successfully!");
-        onLogoUpdated(publicUrl);
+        onLogoUpdated(cacheBusterUrl);
         setFile(null); // Clear file input
       }
     }

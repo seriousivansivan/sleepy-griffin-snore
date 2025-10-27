@@ -62,7 +62,7 @@ export function EditUserDialog({
     if (user) {
       form.reset({
         role: user.role as "user" | "admin",
-        monthly_credit_allowance: user.monthly_credit_allowance,
+        monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
       });
     }
   }, [user, form]);
@@ -139,7 +139,7 @@ export function EditUserDialog({
                   type="text"
                   readOnly
                   disabled
-                  value={user?.credit.toLocaleString(undefined, {
+                  value={(user?.credit ?? 0).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}

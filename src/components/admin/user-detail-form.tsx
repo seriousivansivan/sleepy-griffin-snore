@@ -6,13 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormField,
@@ -34,7 +27,9 @@ import type { Profile } from "@/components/providers/supabase-auth-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Lock } from "lucide-react";
+import { Lock, ArrowLeft, Loader2 } from "lucide-react";
+import { ChangePasswordDialog } from "./change-password-dialog";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
@@ -42,7 +37,7 @@ const formSchema = z.object({
     .number()
     .min(0, "Allowance cannot be negative."),
   has_unlimited_credit: z.boolean().default(false),
-  companyIds: z.array(z.string()).default([]), // New field for company associations
+  companyIds: z.array(z.string()).default([]),
 });
 
 type Company = {
@@ -50,20 +45,14 @@ type Company = {
   name: string;
 };
 
-type EditUserDialogProps = {
-  user: Profile | null;
-  isOpen: boolean;
-  onClose: () => void;
+type UserDetailFormProps = {
+  user: Profile;
   onUserUpdated: () => void;
 };
 
-export function EditUserDialog({
-  user,
-  isOpen,
-  onClose,
-  onUserUpdated,
-}: EditUserDialogProps) {
+export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
+  const router = useRouter();
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,10 +61,10 @@ export function EditUserDialog({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      role: "user",
-      monthly_credit_allowance: 0,
-      has_unlimited_credit: false,
-      companyIds: [],
+      role: user.role as "user" | "admin",
+      monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
+      has_unlimited_credit: user.has_unlimited_credit ?? false,
+      companyIds: user.user_companies.map((uc) => uc.company_id),
     },
   });
 
@@ -106,22 +95,8 @@ export function EditUserDialog({
       }
       setIsCompaniesLoading(false);
     };
-    if (isOpen) {
-      fetchAllCompanies();
-    }
-  }, [isOpen, supabase]);
-
-  // Effect to reset form when user changes or dialog opens
-  useEffect(() => {
-    if (user) {
-      form.reset({
-        role: user.role as "user" | "admin",
-        monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
-        has_unlimited_credit: user.has_unlimited_credit ?? false,
-        companyIds: user.user_companies.map((uc) => uc.company_id),
-      });
-    }
-  }, [user, isOpen, form]);
+    fetchAllCompanies();
+  }, [supabase]);
 
   // Handler for Select All/Deselect All
   const handleSelectAll = (checked: boolean) => {
@@ -137,7 +112,6 @@ export function EditUserDialog({
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) return;
     setIsSubmitting(true);
 
     try {
@@ -203,7 +177,6 @@ export function EditUserDialog({
 
       toast.success("User updated successfully.");
       onUserUpdated();
-      onClose();
     } catch (error: any) {
       console.error("Error updating user:", error);
       toast.error(
@@ -216,39 +189,58 @@ export function EditUserDialog({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit User: {user?.user_name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* User Details */}
-            <div className="border rounded-md p-4 space-y-2 bg-muted/50">
+      <div className="flex items-center mb-6">
+        <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Users
+        </Button>
+        <h1 className="text-3xl font-bold">Edit User: {user.user_name}</h1>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* User Info Card */}
+        <div className="lg:col-span-1">
+          <div className="border rounded-lg p-6 space-y-4 bg-white shadow-sm">
+            <h2 className="text-xl font-semibold">User Details</h2>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                User Name:{" "}
+                <span className="font-normal text-muted-foreground">
+                  {user.user_name || "N/A"}
+                </span>
+              </p>
               <p className="text-sm font-medium">
                 Email:{" "}
                 <span className="font-normal text-muted-foreground">
-                  {user?.id ? user.id.split("@")[0] + "@..." : "N/A"}
+                  {user.id.split("@")[0] + "@..."}
                 </span>
               </p>
               <p className="text-sm font-medium">
                 User ID:{" "}
                 <span className="font-normal text-muted-foreground text-xs break-all">
-                  {user?.id || "N/A"}
+                  {user.id}
                 </span>
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsPasswordDialogOpen(true)}
-                className="mt-2"
-              >
-                <Lock className="mr-2 h-4 w-4" />
-                Change Password
-              </Button>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => setIsPasswordDialogOpen(true)}
+              className="w-full mt-4"
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              Change Password
+            </Button>
+          </div>
+        </div>
 
+        {/* Main Edit Form */}
+        <div className="lg:col-span-2">
+          <div className="border rounded-lg p-6 space-y-6 bg-white shadow-sm">
+            <h2 className="text-xl font-semibold border-b pb-2">
+              Administrative Settings
+            </h2>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="role"
@@ -274,48 +266,48 @@ export function EditUserDialog({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="has_unlimited_credit"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Grant Unlimited Credit</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="monthly_credit_allowance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Monthly Credit Allowance</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="300.00"
-                          {...field}
-                          // FIX: Ensure the value passed to the input is a string.
-                          // Use empty string for 0 to allow placeholder visibility and easier input.
-                          value={field.value === 0 ? "" : String(field.value)}
-                          disabled={hasUnlimitedCredit || isSubmitting}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="has_unlimited_credit"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Grant Unlimited Credit</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="monthly_credit_allowance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Credit Allowance</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="300.00"
+                            {...field}
+                            value={field.value === 0 ? "" : String(field.value)}
+                            disabled={hasUnlimitedCredit || isSubmitting}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 {/* Company Association Management */}
                 <FormField
@@ -330,7 +322,6 @@ export function EditUserDialog({
                           checked={isAllSelected}
                           onCheckedChange={handleSelectAll}
                           disabled={isCompaniesLoading || isSubmitting}
-                          // Pass the indeterminate prop as a string when true, as suggested by the console error
                           {...(isIndeterminate && { indeterminate: "true" })}
                         />
                         <FormLabel className="font-semibold cursor-pointer">
@@ -397,152 +388,28 @@ export function EditUserDialog({
                   )}
                 />
 
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
+                <div className="flex justify-end">
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : "Save Changes"}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
                   </Button>
-                </DialogFooter>
+                </div>
               </form>
             </Form>
           </div>
-        </DialogContent>
-      </Dialog>
-      {user && (
-        <ChangePasswordDialog
-          userId={user.id}
-          isOpen={isPasswordDialogOpen}
-          onClose={() => setIsPasswordDialogOpen(false)}
-        />
-      )}
+        </div>
+      </div>
+      <ChangePasswordDialog
+        userId={user.id}
+        isOpen={isPasswordDialogOpen}
+        onClose={() => setIsPasswordDialogOpen(false)}
+      />
     </>
-  );
-}
-
-// --- New Component: ChangePasswordDialog ---
-
-const passwordSchema = z.object({
-  password: z.string().min(6, "Password must be at least 6 characters."),
-});
-
-type ChangePasswordDialogProps = {
-  userId: string;
-  isOpen: boolean;
-  onClose: () => void;
-};
-
-function ChangePasswordDialog({
-  userId,
-  isOpen,
-  onClose,
-}: ChangePasswordDialogProps) {
-  const { supabase } = useSupabaseAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      password: "",
-    },
-  });
-
-  const handlePasswordChange = async (
-    values: z.infer<typeof passwordSchema>
-  ) => {
-    setIsSubmitting(true);
-    try {
-      // Note: Admin changing another user's password requires the Service Role Key
-      // or a specific policy/function. Since we are using the client-side Supabase
-      // client (which uses the Anon Key), we must use the `admin.updateUserById`
-      // method via a Server Action or Edge Function for security.
-
-      // Since we cannot directly use the Service Role Key client-side,
-      // we will use a simple Edge Function to perform the admin update securely.
-      
-      // For now, I will implement the client-side call assuming a secure backend
-      // mechanism (like an Edge Function) is used, but since I cannot create
-      // a full Edge Function implementation without knowing the deployment URL,
-      // I will simulate the call and provide the necessary Edge Function code
-      // for the user to deploy.
-
-      // *** IMPORTANT: This client-side call is a placeholder for a secure backend call. ***
-      // We will use a dedicated Edge Function for this.
-
-      const { error } = await supabase.functions.invoke('admin-update-user-password', {
-        body: {
-          userId: userId,
-          newPassword: values.password,
-        },
-      });
-
-      if (error) throw error;
-
-      toast.success("Password updated successfully!");
-      onClose();
-      form.reset();
-    } catch (error: any) {
-      console.error("Error changing password:", error);
-      toast.error(
-        `Failed to change password: ${error.message || "An unknown error occurred."}`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Change User Password</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handlePasswordChange)} className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Enter a new password for this user. This action is performed with
-              administrative privileges.
-            </p>
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Password"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
   );
 }

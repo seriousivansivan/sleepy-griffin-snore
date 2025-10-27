@@ -25,6 +25,9 @@ export default function DashboardPage() {
     searchTerm: "",
     selectedCompanyId: null as string | null,
   });
+  
+  // Destructure primitive filter values for stable dependencies
+  const { searchTerm, selectedCompanyId } = filters;
 
   useEffect(() => {
     if (!loading) {
@@ -83,14 +86,14 @@ export default function DashboardPage() {
         .order("created_at", { ascending: false });
 
       // 1. Filter by Company ID
-      if (filters.selectedCompanyId) {
-        query = query.eq("company_id", filters.selectedCompanyId);
+      if (selectedCompanyId) {
+        query = query.eq("company_id", selectedCompanyId);
       }
 
       // 2. Filter by Pay To search term (case-insensitive partial match on JSONB field)
-      if (filters.searchTerm) {
+      if (searchTerm) {
         // Use ilike on the JSONB path 'details->>payTo'
-        query = query.ilike("details->>payTo", `%${filters.searchTerm}%`);
+        query = query.ilike("details->>payTo", `%${searchTerm}%`);
       }
 
       const { data, error } = await query;
@@ -105,14 +108,14 @@ export default function DashboardPage() {
     } finally {
       setVouchersLoading(false);
     }
-  }, [supabase, session, filters]);
+  }, [supabase, session, searchTerm, selectedCompanyId]); // Dependencies are now primitives
 
   useEffect(() => {
-    // Trigger fetch whenever filters change
+    // Trigger fetch whenever fetchVouchers changes (i.e., when searchTerm or selectedCompanyId changes)
     if (!loading && session) {
       fetchVouchers();
     }
-  }, [session?.user.id, loading, fetchVouchers, filters]);
+  }, [session?.user.id, loading, fetchVouchers]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

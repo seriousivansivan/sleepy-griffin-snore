@@ -27,9 +27,9 @@ import type { Profile } from "@/components/providers/supabase-auth-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Lock, ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ChangePasswordDialog } from "./change-password-dialog";
-import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
@@ -52,7 +52,6 @@ type UserDetailFormProps = {
 
 export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
-  const router = useRouter();
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -189,222 +188,229 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
 
   return (
     <>
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => router.back()} className="mr-4">
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Users
-        </Button>
-        <h1 className="text-3xl font-bold">Edit User: {user.user_name}</h1>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* User Info Card */}
-        <div className="lg:col-span-1">
-          <div className="border rounded-lg p-6 space-y-4 bg-white shadow-sm">
-            <h2 className="text-xl font-semibold">User Details</h2>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
-                User Name:{" "}
-                <span className="font-normal text-muted-foreground">
-                  {user.user_name || "N/A"}
-                </span>
-              </p>
-              <p className="text-sm font-medium">
-                Email:{" "}
-                <span className="font-normal text-muted-foreground">
-                  {user.id.split("@")[0] + "@..."}
-                </span>
-              </p>
-              <p className="text-sm font-medium">
-                User ID:{" "}
-                <span className="font-normal text-muted-foreground text-xs break-all">
-                  {user.id}
-                </span>
-              </p>
+      <Card className="h-full">
+        <CardHeader className="border-b p-4">
+          <CardTitle className="text-xl">User Details & Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Avatar and Static Info */}
+          <div className="flex flex-col items-center space-y-4 border-b pb-6">
+            {/* Avatar Placeholder */}
+            <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white text-3xl font-bold">
+              {user.user_name ? user.user_name[0] : "U"}
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsPasswordDialogOpen(true)}
-              className="w-full mt-4"
-            >
-              <Lock className="mr-2 h-4 w-4" />
-              Change Password
+            <Button variant="outline" size="sm" disabled>
+              Edit Avatar (WIP)
             </Button>
           </div>
-        </div>
 
-        {/* Main Edit Form */}
-        <div className="lg:col-span-2">
-          <div className="border rounded-lg p-6 space-y-6 bg-white shadow-sm">
-            <h2 className="text-xl font-semibold border-b pb-2">
-              Administrative Settings
-            </h2>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Static User Info */}
+          <div className="space-y-3 text-sm">
+            <p>
+              <span className="font-semibold">Username:</span>{" "}
+              {user.user_name || "N/A"}
+            </p>
+            <p>
+              <span className="font-semibold">Email:</span>{" "}
+              <span className="text-blue-600 underline cursor-pointer">
+                {user.id.split("@")[0] + "@..."}
+              </span>
+            </p>
+            <div className="flex justify-between items-center">
+              <p>
+                <span className="font-semibold">Password:</span> ************
+              </p>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setIsPasswordDialogOpen(true)}
+                className="h-auto p-0 text-primary"
+              >
+                Change
+              </Button>
+            </div>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Role Field */}
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Credit Fields */}
+              <div className="space-y-4 border p-4 rounded-md bg-gray-50">
+                <h3 className="font-semibold">Credit Management</h3>
                 <FormField
                   control={form.control}
-                  name="role"
+                  name="has_unlimited_credit"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Grant Unlimited Credit</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="monthly_credit_allowance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={isSubmitting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="has_unlimited_credit"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Grant Unlimited Credit</FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="monthly_credit_allowance"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Credit Allowance</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="300.00"
-                            {...field}
-                            value={field.value === 0 ? "" : String(field.value)}
-                            disabled={hasUnlimitedCredit || isSubmitting}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Company Association Management */}
-                <FormField
-                  control={form.control}
-                  name="companyIds"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Company Associations</FormLabel>
-                      {/* Select All Checkbox */}
-                      <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
-                        <Checkbox
-                          checked={isAllSelected}
-                          onCheckedChange={handleSelectAll}
-                          disabled={isCompaniesLoading || isSubmitting}
-                          {...(isIndeterminate && { indeterminate: "true" })}
+                      <FormLabel>Monthly Credit Allowance</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="300.00"
+                          {...field}
+                          value={field.value === 0 ? "" : String(field.value)}
+                          disabled={hasUnlimitedCredit || isSubmitting}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value))
+                          }
                         />
-                        <FormLabel className="font-semibold cursor-pointer">
-                          Select All ({watchedCompanyIds.length} /{" "}
-                          {allCompanies.length})
-                        </FormLabel>
-                      </div>
-                      <ScrollArea className="h-[150px] border rounded-md p-4">
-                        {isCompaniesLoading ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                          </div>
-                        ) : allCompanies.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            No companies available to assign.
-                          </p>
-                        ) : (
-                          allCompanies.map((company) => (
-                            <FormField
-                              key={company.id}
-                              control={form.control}
-                              name="companyIds"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={company.id}
-                                    className="flex flex-row items-start space-x-3 space-y-0 py-1"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(
-                                          company.id
-                                        )}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([
-                                                ...field.value,
-                                                company.id,
-                                              ])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) =>
-                                                    value !== company.id
-                                                )
-                                              );
-                                        }}
-                                        disabled={isSubmitting}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal cursor-pointer">
-                                      {company.name}
-                                    </FormLabel>
-                                  </FormItem>
-                                );
-                              }}
-                            />
-                          ))
-                        )}
-                      </ScrollArea>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Current Remaining Credit:{" "}
+                  <span className="font-medium">
+                    {user.has_unlimited_credit
+                      ? "Unlimited"
+                      : user.credit.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                  </span>
+                </p>
+              </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </div>
-        </div>
-      </div>
+              {/* Company Association Management */}
+              <FormField
+                control={form.control}
+                name="companyIds"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Company Associations</FormLabel>
+                    {/* Select All Checkbox */}
+                    <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
+                      <Checkbox
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        disabled={isCompaniesLoading || isSubmitting}
+                        {...(isIndeterminate && { indeterminate: "true" })}
+                      />
+                      <FormLabel className="font-semibold cursor-pointer">
+                        Select All ({watchedCompanyIds.length} /{" "}
+                        {allCompanies.length})
+                      </FormLabel>
+                    </div>
+                    <ScrollArea className="h-[150px] border rounded-md p-4">
+                      {isCompaniesLoading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                        </div>
+                      ) : allCompanies.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No companies available to assign.
+                        </p>
+                      ) : (
+                        allCompanies.map((company) => (
+                          <FormField
+                            key={company.id}
+                            control={form.control}
+                            name="companyIds"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={company.id}
+                                  className="flex flex-row items-start space-x-3 space-y-0 py-1"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(
+                                        company.id
+                                      )}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([
+                                              ...field.value,
+                                              company.id,
+                                            ])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) =>
+                                                  value !== company.id
+                                              )
+                                            );
+                                      }}
+                                      disabled={isSubmitting}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal cursor-pointer">
+                                    {company.name}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))
+                      )}
+                    </ScrollArea>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end pt-4">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
       <ChangePasswordDialog
         userId={user.id}
         isOpen={isPasswordDialogOpen}

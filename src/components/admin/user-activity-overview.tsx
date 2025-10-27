@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { VoucherList, Voucher } from "@/components/voucher-list";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PieChart, DollarSign } from "lucide-react";
+import { DollarSign } from "lucide-react";
+import { VoucherCompanyDistributionChart } from "./voucher-company-distribution-chart";
 
 type UserActivityOverviewProps = {
   userId: string;
@@ -101,7 +102,7 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
     }
   };
 
-  // Placeholder for chart data calculation (WIP)
+  // Calculate total voucher amount for the stat card
   const totalVoucherAmount = vouchers.reduce((sum, v) => sum + v.total_amount, 0);
 
   return (
@@ -132,20 +133,11 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
           </CardContent>
         </Card>
         
-        {/* Placeholder for Company Distribution Chart */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Vouchers by Company (WIP)
-            </CardTitle>
-            <PieChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="h-24 flex items-center justify-center">
-              <Skeleton className="w-20 h-20 rounded-full" />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Company Distribution Chart */}
+        <VoucherCompanyDistributionChart
+          vouchers={vouchers}
+          isLoading={vouchersLoading}
+        />
       </div>
 
       {/* Voucher List Section */}

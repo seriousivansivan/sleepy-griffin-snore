@@ -16,19 +16,15 @@ export default function AdminVoucherOverviewPage() {
   const fetchAllVouchers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Use the explicit foreign key constraint name ('vouchers_user_id_fkey') for the join.
-      // This is the most robust way to ensure the join works correctly and should resolve the 400 error.
+      // Admins have RLS access to view all vouchers
       const { data, error } = await supabase
         .from("vouchers")
-        .select(
-          `*, companies(name, logo_url), profiles!vouchers_user_id_fkey(user_name)`
-        )
+        .select(`*, companies(name, logo_url)`)
         .order("created_at", { ascending: false });
 
       if (error) {
         throw error;
       }
-
       setVouchers(data || []);
       setCurrentPage(1); // Reset to page 1 after fetching new data
     } catch (error) {
@@ -62,7 +58,6 @@ export default function AdminVoucherOverviewPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
-        showUserColumn={true} // Explicitly show the user column for admin view
       />
     </div>
   );

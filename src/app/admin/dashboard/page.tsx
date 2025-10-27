@@ -4,33 +4,40 @@ import { useEffect, useState } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { StatCard } from "@/components/admin/stat-card";
 import { Users, Building, Ticket } from "lucide-react";
+import { toast } from "sonner";
+
+type Stats = {
+  users: number;
+  companies: number;
+  vouchers: number;
+};
 
 export default function AdminDashboardPage() {
   const { supabase } = useSupabaseAuth();
-  const [stats, setStats] = useState({ users: 0, companies: 0, vouchers: 0 });
+  const [stats, setStats] = useState<Stats>({ users: 0, companies: 0, vouchers: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const [
-          { count: usersCount },
-          { count: companiesCount },
-          { count: vouchersCount },
-        ] = await Promise.all([
-          supabase.from("profiles").select("*", { count: "exact", head: true }),
-          supabase.from("companies").select("*", { count: "exact", head: true }),
-          supabase.from("vouchers").select("*", { count: "exact", head: true }),
-        ]);
+        // Fetch all stats in a single RPC call
+        const { data, error } = await supabase.rpc("get_admin_dashboard_stats");
+
+        if (error) {
+          throw error;
+        }
+
+        const fetchedStats = data as Stats;
 
         setStats({
-          users: usersCount ?? 0,
-          companies: companiesCount ?? 0,
-          vouchers: vouchersCount ?? 0,
+          users: fetchedStats.users ?? 0,
+          companies: fetchedStats.companies ?? 0,
+          vouchers: fetchedStats.vouchers ?? 0,
         });
       } catch (error) {
         console.error("Failed to fetch admin stats:", error);
+        toast.error("Failed to load dashboard statistics.");
       } finally {
         setIsLoading(false);
       }

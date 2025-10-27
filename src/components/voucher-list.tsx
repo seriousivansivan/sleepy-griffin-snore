@@ -62,6 +62,7 @@ type VoucherListProps = {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  showCreator?: boolean; // New prop to control visibility of 'Created By' column
 };
 
 const VOUCHERS_PER_PAGE = 10;
@@ -72,6 +73,7 @@ export function VoucherList({
   currentPage,
   totalPages,
   onPageChange,
+  showCreator = true, // Default to true (visible)
 }: VoucherListProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -207,7 +209,7 @@ export function VoucherList({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Created By</TableHead>
+                    {showCreator && <TableHead>Created By</TableHead>}
                     <TableHead>Company</TableHead>
                     <TableHead>Pay To</TableHead>
                     <TableHead>Date</TableHead>
@@ -219,9 +221,11 @@ export function VoucherList({
                 <TableBody>
                   {currentVouchers.map((voucher) => (
                     <TableRow key={voucher.id}>
-                      <TableCell className="font-medium">
-                        {voucher.user_id?.user_name || "N/A"}
-                      </TableCell>
+                      {showCreator && (
+                        <TableCell className="font-medium">
+                          {voucher.user_id?.user_name || "N/A"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant="outline">
                           {voucher.companies?.name || "N/A"}

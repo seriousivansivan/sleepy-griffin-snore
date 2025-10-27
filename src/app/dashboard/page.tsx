@@ -32,9 +32,11 @@ export default function DashboardPage() {
     setVouchersLoading(true);
     try {
       // Fetch all vouchers for the current user (RLS handles filtering)
+      // We still fetch user_id(user_name) here, but it will only return the current user's name, 
+      // which is fine since we hide the column.
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url)`)
+        .select(`*, companies(name, logo_url), user_id(user_name)`)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -133,6 +135,7 @@ export default function DashboardPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
+            showCreator={false}
           />
         </main>
       </div>

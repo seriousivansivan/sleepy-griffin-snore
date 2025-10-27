@@ -6,7 +6,7 @@ import { VoucherList, Voucher } from "@/components/voucher-list";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign } from "lucide-react";
+import { IndianRupee } from "lucide-react"; // Changed from DollarSign
 import { VoucherCompanyDistributionChart } from "./voucher-company-distribution-chart";
 
 type UserActivityOverviewProps = {
@@ -114,7 +114,7 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
             <CardTitle className="text-sm font-medium">
               Total Vouchers Created
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-muted-foreground" /> {/* Changed icon */}
           </CardHeader>
           <CardContent>
             {vouchersLoading ? (
@@ -122,6 +122,8 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
             ) : (
               <div className="text-2xl font-bold">
                 {totalVoucherAmount.toLocaleString(undefined, {
+                  style: "currency",
+                  currency: "THB", // Updated currency format
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}

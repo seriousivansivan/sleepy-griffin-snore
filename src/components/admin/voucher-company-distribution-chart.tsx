@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, mode }: any) => {
     if (mode === 'amount') {
       formattedValue = value.toLocaleString(undefined, {
         style: "currency",
-        currency: "USD",
+        currency: "THB", // Changed from USD to THB
       });
     } else {
       formattedValue = `${value} voucher${value !== 1 ? 's' : ''}`;

@@ -80,7 +80,7 @@ export function VoucherList({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD", // Changed to USD as per English-only requirement
+      currency: "THB", // Changed from USD to THB
     }).format(amount);
   };
 

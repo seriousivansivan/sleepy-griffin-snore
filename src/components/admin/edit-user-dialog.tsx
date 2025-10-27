@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,10 +34,8 @@ import type { Profile } from "@/components/providers/supabase-auth-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Mail, Lock } from "lucide-react";
 
 const formSchema = z.object({
-  userName: z.string().min(2, "User name must be at least 2 characters."),
   role: z.enum(["user", "admin"]),
   monthly_credit_allowance: z.coerce
     .number()
@@ -66,16 +64,12 @@ export function EditUserDialog({
 }: EditUserDialogProps) {
   const { supabase } = useSupabaseAuth();
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEmailLoading, setIsEmailLoading] = useState(false);
-  const [isPasswordResetting, setIsPasswordResetting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      userName: "",
       role: "user",
       monthly_credit_allowance: 0,
       has_unlimited_credit: false,
@@ -93,49 +87,32 @@ export function EditUserDialog({
     watchedCompanyIds.length > 0 &&
     watchedCompanyIds.length < allCompanies.length;
 
-  // Effect to fetch all companies and user email
+  // Effect to fetch all companies
   useEffect(() => {
-    const fetchAllData = async () => {
-      if (!isOpen || !user) return;
-
-      // Fetch all companies
+    const fetchAllCompanies = async () => {
       setIsCompaniesLoading(true);
-      const { data: companiesData, error: companiesError } = await supabase
+      const { data, error } = await supabase
         .from("companies")
         .select("id, name")
         .order("name", { ascending: true });
 
-      if (companiesError) {
+      if (error) {
         toast.error("Failed to load all companies.");
-        console.error(companiesError);
+        console.error(error);
       } else {
-        setAllCompanies(companiesData || []);
+        setAllCompanies(data || []);
       }
       setIsCompaniesLoading(false);
-
-      // Fetch user email (from auth.users)
-      setIsEmailLoading(true);
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(user.id);
-      
-      if (userError) {
-        console.error("Failed to fetch user email:", userError);
-        setUserEmail("Error fetching email");
-      } else {
-        setUserEmail(userData.user?.email || "N/A");
-      }
-      setIsEmailLoading(false);
     };
-    
     if (isOpen) {
-      fetchAllData();
+      fetchAllCompanies();
     }
-  }, [isOpen, supabase, user]);
+  }, [isOpen, supabase]);
 
   // Effect to reset form when user changes or dialog opens
   useEffect(() => {
     if (user) {
       form.reset({
-        userName: user.user_name ?? "",
         role: user.role as "user" | "admin",
         monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
         has_unlimited_credit: user.has_unlimited_credit ?? false,
@@ -157,37 +134,13 @@ export function EditUserDialog({
     }
   };
 
-  const handlePasswordReset = useCallback(async () => {
-    if (!userEmail) {
-      toast.error("Cannot send reset link: User email is unknown.");
-      return;
-    }
-    setIsPasswordResetting(true);
-    try {
-      // Use the admin client to send a password reset email
-      const { error } = await supabase.auth.admin.generatePasswordResetLink(userEmail);
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success(`Password reset link sent to ${userEmail}.`);
-    } catch (error: any) {
-      console.error("Error sending password reset:", error);
-      toast.error(`Failed to send password reset: ${error.message}`);
-    } finally {
-      setIsPasswordResetting(false);
-    }
-  }, [userEmail, supabase.auth.admin]);
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
     setIsSubmitting(true);
 
     try {
-      // --- 1. Update Profile (User Name, Role, and Credit) ---
+      // --- 1. Update Profile (Role and Credit) ---
       const updateData: Partial<Profile> = {
-        user_name: values.userName,
         role: values.role,
         has_unlimited_credit: values.has_unlimited_credit,
       };
@@ -261,151 +214,79 @@ export function EditUserDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit User: {user?.user_name || "Loading..."}</DialogTitle>
+          <DialogTitle>Edit User: {user?.user_name}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* User Details Section */}
-            <div className="space-y-4 border-b pb-4">
-              <h3 className="text-lg font-semibold">User Details</h3>
-              
-              {/* Email (Read-only) */}
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  {isEmailLoading ? (
-                    <Skeleton className="h-5 w-full" />
-                  ) : (
-                    <p className="text-sm font-medium">{userEmail}</p>
-                  )}
-                </div>
-              </FormItem>
-
-              {/* User Name (Editable) */}
-              <FormField
-                control={form.control}
-                name="userName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>User Name</FormLabel>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isSubmitting}
+                  >
                     <FormControl>
-                      <Input placeholder="User Name" {...field} disabled={isSubmitting} />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Password Reset */}
-              <div className="pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={handlePasswordReset}
-                  disabled={isPasswordResetting || isEmailLoading || !userEmail || isSubmitting}
-                  className="w-full"
-                >
-                  {isPasswordResetting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending Link...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="mr-2 h-4 w-4" />
-                      Send Password Reset Link
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Role and Credit Management Section */}
-            <div className="space-y-4 border-b pb-4">
-              <h3 className="text-lg font-semibold">Permissions & Credit</h3>
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="has_unlimited_credit"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                       disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="has_unlimited_credit"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Grant Unlimited Credit</FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="monthly_credit_allowance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Monthly Credit Allowance</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="300.00"
-                        {...field}
-                        // FIX: Ensure the value passed to the input is a string.
-                        value={field.value === 0 ? "" : String(field.value)}
-                        disabled={hasUnlimitedCredit || isSubmitting}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value))
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormItem>
-                <FormLabel>Remaining Credit</FormLabel>
-                <p className="text-lg font-bold">
-                  {user?.has_unlimited_credit ? (
-                    "Unlimited"
-                  ) : (
-                    (user?.credit ?? 0).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })
-                  )}
-                </p>
-              </FormItem>
-            </div>
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Grant Unlimited Credit</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="monthly_credit_allowance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Monthly Credit Allowance</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="300.00"
+                      {...field}
+                      // FIX: Ensure the value passed to the input is a string.
+                      // Use empty string for 0 to allow placeholder visibility and easier input.
+                      value={field.value === 0 ? "" : String(field.value)}
+                      disabled={hasUnlimitedCredit || isSubmitting}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value))
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Company Association Management */}
             <FormField

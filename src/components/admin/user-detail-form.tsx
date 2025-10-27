@@ -197,12 +197,12 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
         <CardContent className="p-6 space-y-6">
           {/* Static User Info */}
           <div className="space-y-3 text-sm border-b pb-6">
-            <p>
-              <span className="font-semibold">Username:</span>{" "}
+            <div className="flex">
+              <span className="font-semibold mr-1">Username:</span>{" "}
               {user.user_name || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Email:</span>{" "}
+            </div>
+            <div className="flex">
+              <span className="font-semibold mr-1">Email:</span>{" "}
               <span className="text-gray-700">
                 {isEmailLoading ? (
                   <Skeleton className="h-4 w-48 inline-block" />
@@ -210,11 +210,11 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                   email || "N/A"
                 )}
               </span>
-            </p>
+            </div>
             <div className="flex justify-between items-center">
-              <p>
-                <span className="font-semibold">Password:</span> ************
-              </p>
+              <div className="flex">
+                <span className="font-semibold mr-1">Password:</span> ************
+              </div>
               <Button
                 variant="link"
                 size="sm"

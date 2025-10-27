@@ -32,8 +32,8 @@ export default function DashboardPage() {
     setVouchersLoading(true);
     try {
       // Fetch all vouchers for the current user (RLS handles filtering)
-      // We still fetch user_id(user_name) here, but it will only return the current user's name, 
-      // which is fine since we hide the column.
+      // We fetch user_id(user_name) here, but it will only return the current user's name, 
+      // which is fine since we hide the column using showCreator={false}.
       const { data, error } = await supabase
         .from("vouchers")
         .select(`*, companies(name, logo_url), user_id(user_name)`)

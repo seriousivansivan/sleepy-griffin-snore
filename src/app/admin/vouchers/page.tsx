@@ -7,6 +7,12 @@ import { toast } from "sonner";
 
 const VOUCHERS_PER_PAGE = 10;
 
+// Define the structure of the raw data returned by the RPC function
+type RawVoucher = Omit<Voucher, 'companies' | 'user_id'> & {
+  company_id: string;
+  user_id: string;
+};
+
 export default function AdminVoucherOverviewPage() {
   const { supabase } = useSupabaseAuth();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -16,21 +22,67 @@ export default function AdminVoucherOverviewPage() {
   const fetchAllVouchers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Admins have RLS access to view all vouchers
-      // Fetching user_id(user_name) to get the creator's name via the new foreign key relationship
-      const { data, error } = await supabase
-        .from("vouchers")
-        .select(`*, companies(name, logo_url), user_id(user_name)`)
-        .order("created_at", { ascending: false });
+      // 1. Fetch all raw voucher data using the RPC function (bypasses RLS)
+      const { data: rawVouchers, error: rpcError } = await supabase.rpc(
+        "get_all_vouchers_for_admin"
+      );
 
-      if (error) {
-        throw error;
+      if (rpcError) {
+        throw rpcError;
       }
-      setVouchers(data || []);
-      setCurrentPage(1); // Reset to page 1 after fetching new data
+
+      const rawData = rawVouchers as RawVoucher[];
+
+      if (rawData.length === 0) {
+        setVouchers([]);
+        setCurrentPage(1);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Collect unique IDs for companies and users
+      const companyIds = Array.from(
+        new Set(rawData.map((v) => v.company_id))
+      );
+      const userIds = Array.from(new Set(rawData.map((v) => v.user_id)));
+
+      // 3. Fetch related company and user data
+      const [
+        { data: companiesData, error: companiesError },
+        { data: profilesData, error: profilesError },
+      ] = await Promise.all([
+        supabase.from("companies").select("id, name, logo_url").in("id", companyIds),
+        supabase.from("profiles").select("id, user_name").in("id", userIds),
+      ]);
+
+      if (companiesError || profilesError) {
+        console.error("Error fetching related data:", companiesError || profilesError);
+        throw new Error("Failed to fetch related company or user data.");
+      }
+
+      const companyMap = new Map(
+        companiesData?.map((c) => [c.id, c])
+      );
+      const profileMap = new Map(
+        profilesData?.map((p) => [p.id, p])
+      );
+
+      // 4. Map raw vouchers to the final Voucher type
+      const formattedVouchers: Voucher[] = rawData.map((v) => ({
+        ...v,
+        id: v.id, // Ensure ID is number
+        total_amount: v.total_amount,
+        details: v.details as Voucher["details"],
+        created_at: v.created_at,
+        companies: companyMap.get(v.company_id) || null,
+        user_id: profileMap.get(v.user_id) || null,
+      }));
+
+      setVouchers(formattedVouchers);
+      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching all vouchers:", error);
-      toast.error("Failed to load all voucher data.");
+      toast.error("Failed to load all voucher data for admin.");
     } finally {
       setIsLoading(false);
     }

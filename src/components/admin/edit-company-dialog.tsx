@@ -77,41 +77,59 @@ export function EditCompanyDialog({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    let logoUrl = company?.logo_url ?? null;
-    let companyId = company?.id;
-
     try {
-      // If creating a new company, generate a UUID first
-      if (!isEditMode) {
-        const { data, error } = await supabase.rpc('gen_random_uuid');
-        if (error) throw new Error("Could not generate UUID for new company.");
-        companyId = data;
-      }
-
-      if (!companyId) throw new Error("Company ID is missing.");
-
-      // Handle file upload if a new file is selected
-      if (file) {
-        const fileExtension = file.name.split(".").pop();
-        const storagePath = `logos/${companyId}.${fileExtension}`;
-        const publicUrl = await uploadFileAndGetUrl(file, LOGO_BUCKET, storagePath);
-        if (!publicUrl) throw new Error("Logo upload failed.");
-        logoUrl = publicUrl;
-      }
-
-      // Upsert company data
       if (isEditMode) {
+        // --- UPDATE LOGIC ---
+        if (!company) throw new Error("Company data is missing for editing.");
+        let logoUrl = company.logo_url ?? null;
+
+        if (file) {
+          const fileExtension = file.name.split(".").pop();
+          const storagePath = `logos/${company.id}.${fileExtension}`;
+          const publicUrl = await uploadFileAndGetUrl(file, LOGO_BUCKET, storagePath);
+          if (!publicUrl) throw new Error("Logo upload failed.");
+          logoUrl = publicUrl;
+        }
+
         const { error } = await supabase
           .from("companies")
           .update({ name: values.name, logo_url: logoUrl })
-          .eq("id", companyId);
+          .eq("id", company.id);
+
         if (error) throw error;
         toast.success("Company updated successfully.");
       } else {
-        const { error } = await supabase
+        // --- CREATE LOGIC ---
+        // 1. Insert company without logo to get the new ID
+        const { data: newCompanyData, error: insertError } = await supabase
           .from("companies")
-          .insert({ id: companyId, name: values.name, logo_url: logoUrl });
-        if (error) throw error;
+          .insert({ name: values.name })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        if (!newCompanyData) throw new Error("Failed to create company record.");
+
+        // 2. If there's a file, upload it using the new ID
+        if (file) {
+          const newCompanyId = newCompanyData.id;
+          const fileExtension = file.name.split(".").pop();
+          const storagePath = `logos/${newCompanyId}.${fileExtension}`;
+          const publicUrl = await uploadFileAndGetUrl(file, LOGO_BUCKET, storagePath);
+
+          if (!publicUrl) {
+            throw new Error("Company created, but logo upload failed. Please edit the company to re-upload the logo.");
+          }
+
+          // 3. Update the new record with the logo URL
+          const { error: updateError } = await supabase
+            .from("companies")
+            .update({ logo_url: publicUrl })
+            .eq("id", newCompanyId);
+
+          if (updateError) throw updateError;
+        }
+        
         toast.success("Company created successfully.");
       }
 

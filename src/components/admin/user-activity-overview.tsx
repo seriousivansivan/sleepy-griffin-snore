@@ -13,7 +13,11 @@ type UserActivityOverviewProps = {
   userName: string | null;
 };
 
-const VOUCHERS_PER_PAGE = 10;
+// Define the structure of the raw data returned by the RPC function
+type RawVoucher = Omit<Voucher, 'companies' | 'user_id'> & {
+  company_id: string;
+  user_id: string;
+};
 
 export function UserActivityOverview({ userId, userName }: UserActivityOverviewProps) {
   const { supabase } = useSupabaseAuth();
@@ -24,17 +28,58 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
   const fetchVouchers = useCallback(async () => {
     setVouchersLoading(true);
     try {
-      // Fetch vouchers created by this specific user
-      const { data, error } = await supabase
-        .from("vouchers")
-        .select(`*, companies(name, logo_url), user_id(user_name)`)
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+      // 1. Fetch raw voucher data using the RPC function (bypasses RLS for admin)
+      const { data: rawVouchers, error: rpcError } = await supabase.rpc(
+        "get_vouchers_by_user_id_for_admin",
+        { p_user_id: userId }
+      );
 
-      if (error) {
-        throw error;
+      if (rpcError) {
+        throw rpcError;
       }
-      setVouchers(data || []);
+
+      const rawData = rawVouchers as RawVoucher[];
+
+      if (rawData.length === 0) {
+        setVouchers([]);
+        setCurrentPage(1);
+        setVouchersLoading(false);
+        return;
+      }
+
+      // 2. Collect unique IDs for companies
+      const companyIds = Array.from(
+        new Set(rawData.map((v) => v.company_id))
+      );
+      
+      // 3. Fetch related company data
+      const { data: companiesData, error: companiesError } = await supabase
+        .from("companies")
+        .select("id, name, logo_url")
+        .in("id", companyIds);
+
+      if (companiesError) {
+        console.error("Error fetching related company data:", companiesError);
+        throw new Error("Failed to fetch related company data.");
+      }
+
+      const companyMap = new Map(
+        companiesData?.map((c) => [c.id, c])
+      );
+      
+      // 4. Map raw vouchers to the final Voucher type
+      const formattedVouchers: Voucher[] = rawData.map((v) => ({
+        ...v,
+        id: v.id,
+        total_amount: v.total_amount,
+        details: v.details as Voucher["details"],
+        created_at: v.created_at,
+        companies: companyMap.get(v.company_id) || null,
+        // Since we are in the context of a single user, we can hardcode the user_id object
+        user_id: { user_name: userName }, 
+      }));
+
+      setVouchers(formattedVouchers);
       setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching user vouchers:", error);
@@ -42,13 +87,13 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
     } finally {
       setVouchersLoading(false);
     }
-  }, [supabase, userId]);
+  }, [supabase, userId, userName]);
 
   useEffect(() => {
     fetchVouchers();
   }, [fetchVouchers]);
 
-  const totalPages = Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
+  const totalPages = Math.ceil(vouchers.length / 10); // Assuming 10 VOUCHERS_PER_PAGE
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {

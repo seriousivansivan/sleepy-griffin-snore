@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -56,11 +56,6 @@ type EditUserDialogProps = {
   onUserUpdated: () => void;
 };
 
-// Define a type that includes the indeterminate property for the ref target
-interface IndeterminateCheckboxElement extends HTMLButtonElement {
-  indeterminate?: boolean;
-}
-
 export function EditUserDialog({
   user,
   isOpen,
@@ -71,9 +66,6 @@ export function EditUserDialog({
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Ref for the master checkbox, using the custom interface
-  const masterCheckboxRef = useRef<IndeterminateCheckboxElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -93,13 +85,6 @@ export function EditUserDialog({
       return { checked: true, indeterminate: false };
     return { checked: false, indeterminate: true };
   }, [allCompanies, selectedCompanyIds]);
-  
-  // Effect to manually set the indeterminate state on the DOM element
-  useEffect(() => {
-    if (masterCheckboxRef.current) {
-      masterCheckboxRef.current.indeterminate = masterCheckboxState.indeterminate;
-    }
-  }, [masterCheckboxState.indeterminate]);
 
   // Effect to fetch all companies
   useEffect(() => {
@@ -304,12 +289,13 @@ export function EditUserDialog({
                   <FormLabel>Company Associations</FormLabel>
                   <div className="flex flex-row items-center space-x-3 space-y-0 rounded-md border-b p-3">
                     <Checkbox
-                      ref={masterCheckboxRef} // Attach the ref here
                       checked={masterCheckboxState.checked}
                       onCheckedChange={(checked) =>
                         handleSelectAll(!!checked)
                       }
                       disabled={isSubmitting || isCompaniesLoading || allCompanies.length === 0}
+                      // @ts-ignore - Radix Checkbox supports indeterminate state
+                      indeterminate={masterCheckboxState.indeterminate}
                     />
                     <div className="space-y-1 leading-none">
                       <FormLabel className="font-semibold cursor-pointer">

@@ -24,8 +24,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Printer, Download, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { downloadVoucherAsPdf } from "@/lib/download-pdf";
+import { toast } from "sonner";
 
 // Define the types for the new voucher structure
 type VoucherItem = {
@@ -53,6 +56,20 @@ type VoucherListProps = {
 };
 
 export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  const handleDownload = async (voucher: Voucher) => {
+    setDownloadingId(voucher.id);
+    try {
+      await downloadVoucherAsPdf(voucher);
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      toast.error("Could not download PDF. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -174,6 +191,28 @@ export function VoucherList({ vouchers, isLoading }: VoucherListProps) {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Print Voucher</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDownload(voucher)}
+                            disabled={downloadingId === voucher.id}
+                          >
+                            {downloadingId === voucher.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                            <span className="sr-only">
+                              Download Voucher as PDF
+                            </span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Download PDF</p>
                         </TooltipContent>
                       </Tooltip>
                     </TableCell>

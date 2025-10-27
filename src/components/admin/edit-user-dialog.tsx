@@ -75,6 +75,7 @@ export function EditUserDialog({
       .update({
         role: values.role,
         monthly_credit_allowance: values.monthly_credit_allowance,
+        credit: values.monthly_credit_allowance, // This now updates the remaining credit as well
       })
       .eq("id", user.id);
 

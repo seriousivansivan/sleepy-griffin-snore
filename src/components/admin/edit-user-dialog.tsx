@@ -274,6 +274,9 @@ export function EditUserDialog({
                       type="number"
                       placeholder="300.00"
                       {...field}
+                      // FIX: Ensure the value passed to the input is a string.
+                      // Use empty string for 0 to allow placeholder visibility and easier input.
+                      value={field.value === 0 ? "" : String(field.value)}
                       disabled={hasUnlimitedCredit || isSubmitting}
                       onChange={(e) =>
                         field.onChange(parseFloat(e.target.value))

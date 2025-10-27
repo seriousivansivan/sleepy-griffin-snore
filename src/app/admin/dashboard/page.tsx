@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
   }, [supabase]);
 
   return (
-    <div>
+    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <Button variant="outline" size="sm" asChild>

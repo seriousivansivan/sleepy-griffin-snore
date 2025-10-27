@@ -56,6 +56,11 @@ type EditUserDialogProps = {
   onUserUpdated: () => void;
 };
 
+// Define a type that includes the indeterminate property for the ref target
+interface IndeterminateCheckboxElement extends HTMLButtonElement {
+  indeterminate?: boolean;
+}
+
 export function EditUserDialog({
   user,
   isOpen,
@@ -67,8 +72,8 @@ export function EditUserDialog({
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Ref for the master checkbox to manually set the indeterminate state
-  const masterCheckboxRef = useRef<HTMLButtonElement>(null);
+  // Ref for the master checkbox, using the custom interface
+  const masterCheckboxRef = useRef<IndeterminateCheckboxElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -92,7 +97,6 @@ export function EditUserDialog({
   // Effect to manually set the indeterminate state on the DOM element
   useEffect(() => {
     if (masterCheckboxRef.current) {
-      // @ts-ignore - We are accessing the native DOM property
       masterCheckboxRef.current.indeterminate = masterCheckboxState.indeterminate;
     }
   }, [masterCheckboxState.indeterminate]);

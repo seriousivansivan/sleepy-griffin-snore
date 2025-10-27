@@ -63,6 +63,7 @@ type VoucherListProps = {
   totalPages: number;
   onPageChange: (page: number) => void;
   showCreator?: boolean; // New prop to control visibility of 'Created By' column
+  showActions?: boolean; // New prop to control visibility of 'Actions' column
 };
 
 const VOUCHERS_PER_PAGE = 10;
@@ -74,6 +75,7 @@ export function VoucherList({
   totalPages,
   onPageChange,
   showCreator = true, // Default to true (visible)
+  showActions = true, // Default to true (visible)
 }: VoucherListProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -213,7 +215,7 @@ export function VoucherList({
                       <TableHead>Date</TableHead>
                       <TableHead>Particulars</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      {showActions && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -254,24 +256,26 @@ export function VoucherList({
                         <TableCell className="text-right font-medium">
                           {formatCurrency(voucher.total_amount)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link
-                                  href={`/dashboard/voucher/${voucher.id}/print`}
-                                  target="_blank"
-                                >
-                                  <Printer className="h-4 w-4" />
-                                  <span className="sr-only">Print Voucher</span>
-                                </Link>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Print Voucher</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableCell>
+                        {showActions && (
+                          <TableCell className="text-right">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" asChild>
+                                  <Link
+                                    href={`/dashboard/voucher/${voucher.id}/print`}
+                                    target="_blank"
+                                  >
+                                    <Printer className="h-4 w-4" />
+                                    <span className="sr-only">Print Voucher</span>
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Print Voucher</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

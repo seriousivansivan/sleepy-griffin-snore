@@ -164,6 +164,7 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
             totalPages={totalPages}
             onPageChange={handlePageChange}
             showCreator={false} // Hide creator column since it's implicit
+            showActions={false} // Hide actions column (print button)
           />
         </CardContent>
       </Card>

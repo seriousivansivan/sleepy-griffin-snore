@@ -31,12 +31,14 @@ import {
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { toast } from "sonner";
 import type { Profile } from "@/components/providers/supabase-auth-provider";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
   monthly_credit_allowance: z.coerce
     .number()
     .min(0, "Allowance cannot be negative."),
+  has_unlimited_credit: z.boolean().default(false),
 });
 
 type EditUserDialogProps = {
@@ -58,11 +60,14 @@ export function EditUserDialog({
     resolver: zodResolver(formSchema),
   });
 
+  const hasUnlimitedCredit = form.watch("has_unlimited_credit");
+
   useEffect(() => {
     if (user) {
       form.reset({
         role: user.role as "user" | "admin",
         monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
+        has_unlimited_credit: user.has_unlimited_credit ?? false,
       });
     }
   }, [user, form]);
@@ -70,13 +75,22 @@ export function EditUserDialog({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
 
+    const updateData: Partial<Profile> = {
+      role: values.role,
+      has_unlimited_credit: values.has_unlimited_credit,
+    };
+
+    if (values.has_unlimited_credit) {
+      updateData.monthly_credit_allowance = 0;
+      updateData.credit = 0;
+    } else {
+      updateData.monthly_credit_allowance = values.monthly_credit_allowance;
+      updateData.credit = values.monthly_credit_allowance;
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({
-        role: values.role,
-        monthly_credit_allowance: values.monthly_credit_allowance,
-        credit: values.monthly_credit_allowance, // This now updates the remaining credit as well
-      })
+      .update(updateData)
       .eq("id", user.id);
 
     if (error) {
@@ -122,31 +136,39 @@ export function EditUserDialog({
             />
             <FormField
               control={form.control}
+              name="has_unlimited_credit"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Grant Unlimited Credit</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="monthly_credit_allowance"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Monthly Credit Allowance</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="300.00" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="300.00"
+                      {...field}
+                      disabled={hasUnlimitedCredit}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormItem>
-              <FormLabel>Current Remaining Credit</FormLabel>
-              <FormControl>
-                <Input
-                  type="text"
-                  readOnly
-                  disabled
-                  value={(user?.credit ?? 0).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                />
-              </FormControl>
-            </FormItem>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel

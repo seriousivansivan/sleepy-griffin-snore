@@ -11,6 +11,7 @@ export type Profile = {
   role: string;
   monthly_credit_allowance: number;
   credit: number;
+  has_unlimited_credit: boolean;
   updated_at: string;
   user_companies: { company_id: string }[];
 };

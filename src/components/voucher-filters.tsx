@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 type Company = {
   id: string;
@@ -33,12 +33,19 @@ export function VoucherFilters({
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
     null
   );
+  const isMounted = useRef(false);
 
   // Debounce the search term input to prevent excessive database queries
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Effect to trigger the parent callback when filters change
   useEffect(() => {
+    // Prevent running on the initial mount, which causes the infinite loop
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+
     onFilterChange({
       searchTerm: debouncedSearchTerm,
       companyId: selectedCompanyId,

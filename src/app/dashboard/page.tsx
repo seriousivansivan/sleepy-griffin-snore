@@ -3,17 +3,20 @@
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
 import { Settings, Shield } from "lucide-react";
+
+const VOUCHERS_PER_PAGE = 10;
 
 export default function DashboardPage() {
   const { session, supabase, loading, profile } = useSupabaseAuth();
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [vouchersLoading, setVouchersLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!loading) {
@@ -28,6 +31,7 @@ export default function DashboardPage() {
   const fetchVouchers = useCallback(async () => {
     setVouchersLoading(true);
     try {
+      // Fetch all vouchers for the current user (RLS handles filtering)
       const { data, error } = await supabase
         .from("vouchers")
         .select(`*, companies(name, logo_url)`)
@@ -37,6 +41,7 @@ export default function DashboardPage() {
         throw error;
       }
       setVouchers(data || []);
+      setCurrentPage(1); // Reset to page 1 after fetching new data
     } catch (error) {
       console.error("Error fetching vouchers:", error);
     } finally {
@@ -45,8 +50,6 @@ export default function DashboardPage() {
   }, [supabase]);
 
   useEffect(() => {
-    // This effect now only runs on initial load or when the user actually changes.
-    // It will no longer run on every session refresh (e.g., on tab focus).
     if (!loading && session) {
       fetchVouchers();
     }
@@ -55,6 +58,16 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
+  }, [vouchers.length]);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   if (
@@ -114,7 +127,13 @@ export default function DashboardPage() {
         </header>
 
         <main>
-          <VoucherList vouchers={vouchers} isLoading={vouchersLoading} />
+          <VoucherList
+            vouchers={vouchers}
+            isLoading={vouchersLoading}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </main>
       </div>
     </div>

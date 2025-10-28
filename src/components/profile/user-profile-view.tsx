@@ -4,11 +4,21 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-company-distribution-chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/time-filter";
+import {
+  TimeFilter,
+  TimeRange,
+  calculateDateRange,
+} from "@/components/admin/time-filter";
 import { formatISO, format, parseISO } from "date-fns";
 import {
   LineChart,
@@ -20,6 +30,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { EditProfileForm } from "./edit-profile-form";
 
 type Company = {
   id: string;
@@ -60,51 +72,57 @@ export function UserProfileView() {
   const [dataLoading, setDataLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRange, setFilterRange] = useState<TimeRange>("all");
+  const [isEditing, setIsEditing] = useState(false);
 
-  const fetchData = useCallback(async (range: TimeRange) => {
-    if (!profile) return;
-    setDataLoading(true);
+  const fetchData = useCallback(
+    async (range: TimeRange) => {
+      if (!profile) return;
+      setDataLoading(true);
 
-    const { start, end } = calculateDateRange(range);
+      const { start, end } = calculateDateRange(range);
 
-    try {
-      let voucherQuery = supabase
-        .from("vouchers")
-        .select(`
+      try {
+        let voucherQuery = supabase
+          .from("vouchers")
+          .select(
+            `
           *,
           companies(*),
           user:profiles!user_id(id, user_name)
-        `)
-        .order("created_at", { ascending: false });
+        `
+          )
+          .order("created_at", { ascending: false });
 
-      if (start) {
-        voucherQuery = voucherQuery.gte('created_at', formatISO(start));
-      }
-      if (end) {
-        voucherQuery = voucherQuery.lte('created_at', formatISO(end));
-      }
+        if (start) {
+          voucherQuery = voucherQuery.gte("created_at", formatISO(start));
+        }
+        if (end) {
+          voucherQuery = voucherQuery.lte("created_at", formatISO(end));
+        }
 
-      const { data: voucherData, error: voucherError } = await voucherQuery;
-      if (voucherError) throw voucherError;
-      setVouchers(voucherData as Voucher[] || []);
-      setCurrentPage(1);
+        const { data: voucherData, error: voucherError } = await voucherQuery;
+        if (voucherError) throw voucherError;
+        setVouchers((voucherData as Voucher[]) || []);
+        setCurrentPage(1);
 
-      const companyIds = profile.user_companies.map((uc) => uc.company_id);
-      if (companyIds.length > 0) {
-        const { data: companyData, error: companyError } = await supabase
-          .from("companies")
-          .select("id, name")
-          .in("id", companyIds);
-        if (companyError) throw companyError;
-        setAssociatedCompanies(companyData || []);
+        const companyIds = profile.user_companies.map((uc) => uc.company_id);
+        if (companyIds.length > 0) {
+          const { data: companyData, error: companyError } = await supabase
+            .from("companies")
+            .select("id, name")
+            .in("id", companyIds);
+          if (companyError) throw companyError;
+          setAssociatedCompanies(companyData || []);
+        }
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+        toast.error("Failed to load profile data.");
+      } finally {
+        setDataLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching profile data:", error);
-      toast.error("Failed to load profile data.");
-    } finally {
-      setDataLoading(false);
-    }
-  }, [profile, supabase]);
+    },
+    [profile, supabase]
+  );
 
   useEffect(() => {
     if (!authLoading) {
@@ -112,7 +130,10 @@ export function UserProfileView() {
     }
   }, [authLoading, fetchData, filterRange]);
 
-  const totalVoucherAmount = vouchers.reduce((sum, v) => sum + v.total_amount, 0);
+  const totalVoucherAmount = vouchers.reduce(
+    (sum, v) => sum + v.total_amount,
+    0
+  );
   const totalPages = Math.ceil(vouchers.length / 10);
 
   const { chartData, companyNames } = useMemo(() => {
@@ -148,13 +169,13 @@ export function UserProfileView() {
     });
 
     const finalCompanyNames = Array.from(uniqueCompanyNames);
-    const finalChartData = Array.from(dataMap.values()).map(entry => {
-        finalCompanyNames.forEach(name => {
-            if (!entry[name]) {
-                entry[name] = 0;
-            }
-        });
-        return entry;
+    const finalChartData = Array.from(dataMap.values()).map((entry) => {
+      finalCompanyNames.forEach((name) => {
+        if (!entry[name]) {
+          entry[name] = 0;
+        }
+      });
+      return entry;
     });
 
     return { chartData: finalChartData, companyNames: finalCompanyNames };
@@ -182,69 +203,104 @@ export function UserProfileView() {
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-1">
         <Card>
-          <CardHeader>
-            <CardTitle>My Details</CardTitle>
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle>My Details</CardTitle>
+              <CardDescription>
+                View or edit your profile information.
+              </CardDescription>
+            </div>
+            {!isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="space-y-6 text-sm">
-            <div className="space-y-1">
-              <p className="font-medium text-muted-foreground">Username</p>
-              <p>{profile.user_name}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium text-muted-foreground">Email</p>
-              <p>{session?.user.email}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium text-muted-foreground">Role</p>
-              <Badge variant={profile.role === "admin" ? "default" : "secondary"}>
-                {profile.role}
-              </Badge>
-            </div>
-            <div className="space-y-4 border p-4 rounded-md bg-gray-50/80">
-              <h3 className="font-semibold">Credit Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+            {isEditing ? (
+              <EditProfileForm
+                onSuccess={() => setIsEditing(false)}
+                onCancel={() => setIsEditing(false)}
+              />
+            ) : (
+              <>
                 <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Monthly Allowance</p>
-                  <p>
-                    {profile.has_unlimited_credit
-                      ? "Unlimited"
-                      : (profile.monthly_credit_allowance ?? 0).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                  </p>
+                  <p className="font-medium text-muted-foreground">Username</p>
+                  <p>{profile.user_name}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Remaining Credit</p>
-                  <p>
-                    {profile.has_unlimited_credit
-                      ? "Unlimited"
-                      : (profile.credit ?? 0).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                  </p>
+                  <p className="font-medium text-muted-foreground">Email</p>
+                  <p>{session?.user.email}</p>
                 </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium text-muted-foreground">My Companies</p>
-              {dataLoading ? (
-                <Skeleton className="h-20 w-full" />
-              ) : (
-                <div className="border rounded-md p-4 max-h-40 overflow-y-auto">
-                  {associatedCompanies.length > 0 ? (
-                    <ul className="space-y-2">
-                      {associatedCompanies.map((company) => (
-                        <li key={company.id}>{company.name}</li>
-                      ))}
-                    </ul>
+                <div className="space-y-1">
+                  <p className="font-medium text-muted-foreground">Role</p>
+                  <Badge
+                    variant={profile.role === "admin" ? "default" : "secondary"}
+                  >
+                    {profile.role}
+                  </Badge>
+                </div>
+                <div className="space-y-4 border p-4 rounded-md bg-gray-50/80">
+                  <h3 className="font-semibold">Credit Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground">
+                        Monthly Allowance
+                      </p>
+                      <p>
+                        {profile.has_unlimited_credit
+                          ? "Unlimited"
+                          : (
+                              profile.monthly_credit_allowance ?? 0
+                            ).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground">
+                        Remaining Credit
+                      </p>
+                      <p>
+                        {profile.has_unlimited_credit
+                          ? "Unlimited"
+                          : (profile.credit ?? 0).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-medium text-muted-foreground">
+                    My Companies
+                  </p>
+                  {dataLoading ? (
+                    <Skeleton className="h-20 w-full" />
                   ) : (
-                    <p className="text-muted-foreground">No companies associated.</p>
+                    <div className="border rounded-md p-4 max-h-40 overflow-y-auto">
+                      {associatedCompanies.length > 0 ? (
+                        <ul className="space-y-2">
+                          {associatedCompanies.map((company) => (
+                            <li key={company.id}>{company.name}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          No companies associated.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -260,7 +316,9 @@ export function UserProfileView() {
                 <CardTitle className="text-sm font-medium">
                   Total Vouchers Created
                 </CardTitle>
-                <span className="text-sm font-semibold text-muted-foreground">THB</span>
+                <span className="text-sm font-semibold text-muted-foreground">
+                  THB
+                </span>
               </div>
               {dataLoading ? (
                 <Skeleton className="h-8 w-24" />
@@ -318,7 +376,10 @@ export function UserProfileView() {
               )}
             </CardContent>
           </Card>
-          <VoucherCompanyDistributionChart vouchers={vouchers} isLoading={dataLoading} />
+          <VoucherCompanyDistributionChart
+            vouchers={vouchers}
+            isLoading={dataLoading}
+          />
         </div>
         <VoucherList
           vouchers={vouchers}

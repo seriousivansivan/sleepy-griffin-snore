@@ -17,7 +17,7 @@ type UserActivityOverviewProps = {
 };
 
 // Define the structure of the raw data returned by the RPC function
-type RawVoucher = Omit<Voucher, 'companies' | 'user_id'> & {
+type RawVoucher = Omit<Voucher, 'companies' | 'user'> & {
   company_id: string;
   user_id: string;
 };
@@ -90,8 +90,8 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
         details: v.details as Voucher["details"],
         created_at: v.created_at,
         companies: companyMap.get(v.company_id) || null,
-        // Since we are in the context of a single user, we can hardcode the user_id object
-        user_id: { user_name: userName }, 
+        // Since we are in the context of a single user, we can hardcode the user object
+        user: { id: userId, user_name: userName }, 
       }));
 
       setVouchers(formattedVouchers);

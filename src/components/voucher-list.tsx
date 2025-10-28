@@ -52,8 +52,8 @@ export type Voucher = {
   total_amount: number;
   details: VoucherDetails;
   created_at: string;
-  companies: { name: string; logo_url: string | null } | null;
-  user_id: { user_name: string | null } | null; // Added for creator name
+  companies: { id: string; name: string; logo_url: string | null } | null;
+  user: { id: string; user_name: string | null } | null;
 };
 
 type VoucherListProps = {
@@ -223,7 +223,7 @@ export function VoucherList({
                       <TableRow key={voucher.id}>
                         {showCreator && (
                           <TableCell className="font-medium">
-                            {voucher.user_id?.user_name || "N/A"}
+                            {voucher.user?.user_name || "N/A"}
                           </TableCell>
                         )}
                         <TableCell>

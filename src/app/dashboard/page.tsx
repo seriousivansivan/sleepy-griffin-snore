@@ -32,19 +32,20 @@ export default function DashboardPage() {
   const fetchVouchers = useCallback(async () => {
     setVouchersLoading(true);
     try {
-      // Fetch all vouchers for the current user (RLS handles filtering)
-      // We fetch user_id(user_name) here, but it will only return the current user's name, 
-      // which is fine since we hide the column using showCreator={false}.
       const { data, error } = await supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url), user_id(user_name)`)
+        .select(`
+          *,
+          companies(*),
+          user:profiles!user_id(id, user_name)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) {
         throw error;
       }
-      setVouchers(data || []);
-      setCurrentPage(1); // Reset to page 1 after fetching new data
+      setVouchers(data as Voucher[] || []);
+      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching vouchers:", error);
     } finally {
@@ -53,8 +54,6 @@ export default function DashboardPage() {
   }, [supabase]);
 
   useEffect(() => {
-    // We now wait for the profile to be loaded, not just the session.
-    // This makes the data fetch more reliable on client-side navigation.
     if (!loading && profile) {
       fetchVouchers();
     }

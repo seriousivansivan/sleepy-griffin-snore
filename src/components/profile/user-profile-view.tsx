@@ -70,7 +70,11 @@ export function UserProfileView() {
     try {
       let voucherQuery = supabase
         .from("vouchers")
-        .select(`*, companies(name, logo_url)`)
+        .select(`
+          *,
+          companies(*),
+          user:profiles!user_id(id, user_name)
+        `)
         .order("created_at", { ascending: false });
 
       if (start) {
@@ -82,7 +86,7 @@ export function UserProfileView() {
 
       const { data: voucherData, error: voucherError } = await voucherQuery;
       if (voucherError) throw voucherError;
-      setVouchers(voucherData || []);
+      setVouchers(voucherData as Voucher[] || []);
       setCurrentPage(1);
 
       const companyIds = profile.user_companies.map((uc) => uc.company_id);

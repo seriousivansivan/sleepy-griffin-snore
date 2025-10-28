@@ -8,6 +8,7 @@ import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
 import { Shield } from "lucide-react";
+import { UserNav } from "@/components/user-nav";
 
 const VOUCHERS_PER_PAGE = 10;
 
@@ -56,11 +57,6 @@ export default function DashboardPage() {
       fetchVouchers();
     }
   }, [session?.user.id, loading, fetchVouchers]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
 
   const totalPages = useMemo(() => {
     return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
@@ -115,10 +111,8 @@ export default function DashboardPage() {
                 </Link>
               </Button>
             )}
-            <Button onClick={handleLogout} variant="outline">
-              Logout
-            </Button>
             <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
+            <UserNav />
           </div>
         </header>
 

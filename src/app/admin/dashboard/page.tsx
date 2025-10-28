@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { useRouter } from "next/navigation";
 import { StatCard } from "@/components/admin/stat-card";
 import { Users, Building, Ticket } from "lucide-react";
 import { toast } from "sonner";
+import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/time-filter";
+import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-company-distribution-chart";
+import { VoucherActivityChart } from "@/components/admin/voucher-activity-chart";
+import type { Voucher } from "@/components/voucher-list";
+import { format } from "date-fns";
 
 type DashboardStats = {
   users: number;
@@ -13,17 +18,79 @@ type DashboardStats = {
   vouchers: number;
 };
 
+type ActivityData = {
+  activity_date: string;
+  total_amount: number;
+};
+
 export default function AdminDashboardPage() {
   const { supabase, session, loading, profile } = useSupabaseAuth();
   const router = useRouter();
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+
+  const [timeRange, setTimeRange] = useState<TimeRange>("this_month");
+  const [chartVouchers, setChartVouchers] = useState<Voucher[]>([]);
+  const [activityData, setActivityData] = useState<ActivityData[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && (!session || profile?.role !== "admin")) {
       router.replace("/dashboard");
     }
   }, [session, loading, profile, router]);
+
+  const fetchChartData = useCallback(async (range: TimeRange) => {
+    setChartsLoading(true);
+    try {
+      const { start, end } = calculateDateRange(range);
+      const p_start_date = start ? format(start, "yyyy-MM-dd") : null;
+      const p_end_date = end ? format(end, "yyyy-MM-dd") : null;
+
+      const { data: vouchersRes, error: vouchersError } = await supabase.rpc(
+        "get_all_vouchers_for_admin",
+        { p_start_date, p_end_date }
+      );
+      if (vouchersError) throw vouchersError;
+
+      if (vouchersRes && vouchersRes.length > 0) {
+        const companyIds = [...new Set(vouchersRes.map((v: any) => v.company_id))];
+        const { data: companiesData, error: companiesError } = await supabase
+          .from("companies")
+          .select("id, name")
+          .in("id", companyIds);
+        if (companiesError) throw companiesError;
+        
+        const companyMap = new Map(companiesData.map(c => [c.id, c]));
+        const formattedVouchers = vouchersRes.map((v: any) => ({
+          ...v,
+          details: v.details as Voucher["details"],
+          companies: companyMap.get(v.company_id) || null,
+          user: null,
+        }));
+        setChartVouchers(formattedVouchers);
+      } else {
+        setChartVouchers([]);
+      }
+
+      const { data: activityRes, error: activityError } = await supabase.rpc(
+        "get_voucher_activity_for_admin",
+        {
+          p_start_date: start ? format(start, "yyyy-MM-dd") : '1970-01-01',
+          p_end_date: end ? format(end, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        }
+      );
+      if (activityError) throw activityError;
+      setActivityData(activityRes || []);
+
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+      toast.error("Failed to load chart data.");
+    } finally {
+      setChartsLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -42,8 +109,9 @@ export default function AdminDashboardPage() {
 
     if (profile?.role === "admin") {
       fetchStats();
+      fetchChartData(timeRange);
     }
-  }, [supabase, profile]);
+  }, [profile, timeRange, fetchChartData, supabase]);
 
   if (loading || !session || profile?.role !== "admin") {
     return (
@@ -79,15 +147,16 @@ export default function AdminDashboardPage() {
           href="/admin/vouchers"
         />
       </div>
-      <div className="mt-8 p-6 bg-white rounded-lg shadow-sm border">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-          Welcome, Admin!
-        </h2>
-        <p className="text-gray-600">
-          Use the cards above to navigate to different management sections. You
-          can manage users, companies, and vouchers for the entire application
-          from this panel.
-        </p>
+
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold">Activity Overview</h2>
+          <TimeFilter range={timeRange} onRangeChange={setTimeRange} />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <VoucherActivityChart data={activityData} isLoading={chartsLoading} />
+          <VoucherCompanyDistributionChart vouchers={chartVouchers} isLoading={chartsLoading} />
+        </div>
       </div>
     </div>
   );

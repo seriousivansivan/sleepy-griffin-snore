@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/time-filter";
 import { formatISO } from "date-fns";
+import { VoucherTrendChart } from "./voucher-trend-chart";
 
 type Company = {
   id: string;
@@ -194,6 +195,11 @@ export function UserProfileView() {
           </Card>
           <VoucherCompanyDistributionChart vouchers={vouchers} isLoading={dataLoading} />
         </div>
+        <VoucherTrendChart
+          vouchers={vouchers}
+          isLoading={dataLoading}
+          timeRange={filterRange}
+        />
         <VoucherList
           vouchers={vouchers}
           isLoading={dataLoading}

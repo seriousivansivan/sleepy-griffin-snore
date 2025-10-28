@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
-import { format } from "date-fns";
+import { formatISO } from "date-fns";
 
 type UserProfile = {
   id: string;
@@ -54,17 +54,13 @@ export function AdminVoucherList() {
     try {
       const { start, end } = calculateDateRange(timeRange);
       
-      // Format dates only if they exist
-      const p_start_date = start ? format(start, "yyyy-MM-dd") : undefined;
-      const p_end_date = end ? format(end, "yyyy-MM-dd") : undefined;
+      const p_start_date = start ? formatISO(start) : null;
+      const p_end_date = end ? formatISO(end) : null;
 
-      // Prepare arguments object, only including non-undefined values
-      const dateArgs: { p_start_date?: string; p_end_date?: string } = {};
-      if (p_start_date) dateArgs.p_start_date = p_start_date;
-      if (p_end_date) dateArgs.p_end_date = p_end_date;
-      
-      // Determine RPC call arguments: pass the object if it has keys, otherwise pass undefined
-      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : undefined;
+      const rpcArgs = {
+        p_start_date: p_start_date,
+        p_end_date: p_end_date,
+      };
 
       const [usersRes, companiesRes, vouchersRes] = await Promise.all([
         supabase.from("profiles").select("id, user_name").order("user_name"),
@@ -106,7 +102,7 @@ export function AdminVoucherList() {
     } finally {
       setLoading(false);
     }
-  }, [supabase, timeRange]); // Added timeRange to dependencies to refetch when filter changes
+  }, [supabase, timeRange]);
 
   useEffect(() => {
     fetchInitialData();
@@ -114,8 +110,6 @@ export function AdminVoucherList() {
 
   useEffect(() => {
     let vouchers = [...allVouchers];
-    // Note: Date filtering is now handled by the RPC function based on `timeRange`
-    // We only need to apply client-side filters here (user, company, search)
 
     if (selectedUser !== "all") {
       vouchers = vouchers.filter((v) => v.user?.id === selectedUser);
@@ -186,7 +180,7 @@ export function AdminVoucherList() {
                   ))}
                 </SelectContent>
               </Select>
-              <TimeFilter range={timeRange} onRangeChange={setTimeRange} />
+              <TimeFilter range={timeRange} onValueChange={setTimeRange} />
             </div>
           )}
         </CardContent>

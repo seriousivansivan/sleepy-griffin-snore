@@ -10,7 +10,7 @@ import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/ti
 import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-company-distribution-chart";
 import { VoucherActivityChart } from "@/components/admin/voucher-activity-chart";
 import type { Voucher } from "@/components/voucher-list";
-import { format } from "date-fns";
+import { format, formatISO } from "date-fns";
 import { CompanyStatsCarousel, CompanyStat } from "@/components/admin/company-stats-carousel";
 
 type DashboardStats = {
@@ -48,25 +48,24 @@ export default function AdminDashboardPage() {
     try {
       const { start, end } = calculateDateRange(range);
       
-      // Format dates only if they exist
-      const p_start_date = start ? format(start, "yyyy-MM-dd") : undefined;
-      const p_end_date = end ? format(end, "yyyy-MM-dd") : undefined;
+      const p_start_date_iso = start ? formatISO(start) : null;
+      const p_end_date_iso = end ? formatISO(end) : null;
 
-      // Prepare arguments object, only including non-undefined values
-      const dateArgs: { p_start_date?: string; p_end_date?: string } = {};
-      if (p_start_date) dateArgs.p_start_date = p_start_date;
-      if (p_end_date) dateArgs.p_end_date = p_end_date;
-      
-      // Determine RPC call arguments: pass the object if it has keys, otherwise pass undefined
-      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : undefined;
+      const rpcArgs = {
+        p_start_date: p_start_date_iso,
+        p_end_date: p_end_date_iso,
+      };
 
       const [vouchersRes, activityRes, companyStatsRes] = await Promise.all([
         supabase.rpc("get_all_vouchers_for_admin", rpcArgs),
         supabase.rpc("get_voucher_activity_for_admin", {
-          p_start_date: p_start_date || '1970-01-01', // Activity chart requires non-null dates
-          p_end_date: p_end_date || format(new Date(), "yyyy-MM-dd"),
+          p_start_date: start ? format(start, "yyyy-MM-dd") : '1970-01-01',
+          p_end_date: end ? format(end, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
         }),
-        supabase.rpc("get_company_voucher_stats", rpcArgs)
+        supabase.rpc("get_company_voucher_stats", {
+          p_start_date: start ? format(start, "yyyy-MM-dd") : null,
+          p_end_date: end ? format(end, "yyyy-MM-dd") : null,
+        })
       ]);
 
       if (vouchersRes.error) throw vouchersRes.error;
@@ -164,7 +163,7 @@ export default function AdminDashboardPage() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Activity Overview</h2>
-            <TimeFilter range={timeRange} onRangeChange={setTimeRange} />
+            <TimeFilter range={timeRange} onValueChange={setTimeRange} />
           </div>
           <div className="grid gap-6 md:grid-cols-2">
             <VoucherActivityChart data={activityData} isLoading={chartsLoading} />

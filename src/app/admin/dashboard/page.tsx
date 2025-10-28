@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { useRouter } from "next/navigation";
 import { StatCard } from "@/components/admin/stat-card";
-import { Users, Building, Ticket } from "lucide-react";
+import { Users, Building, Ticket, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/time-filter";
 import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-company-distribution-chart";
@@ -12,6 +12,8 @@ import { VoucherActivityChart } from "@/components/admin/voucher-activity-chart"
 import type { Voucher } from "@/components/voucher-list";
 import { formatISO } from "date-fns";
 import { CompanyStatsCarousel, CompanyStat } from "@/components/admin/company-stats-carousel";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type DashboardStats = {
   users: number;
@@ -125,7 +127,15 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to User Dashboard
+          </Link>
+        </Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <StatCard
           title="Total Users"

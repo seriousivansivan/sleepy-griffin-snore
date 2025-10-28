@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
-import { Settings, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 const VOUCHERS_PER_PAGE = 10;
 
@@ -115,12 +115,6 @@ export default function DashboardPage() {
                 </Link>
               </Button>
             )}
-            <Button variant="outline" size="icon" asChild>
-              <Link href="/dashboard/settings">
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Settings</span>
-              </Link>
-            </Button>
             <Button onClick={handleLogout} variant="outline">
               Logout
             </Button>

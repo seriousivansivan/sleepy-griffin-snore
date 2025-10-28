@@ -47,16 +47,24 @@ export default function AdminDashboardPage() {
     setChartsLoading(true);
     try {
       const { start, end } = calculateDateRange(range);
-      const p_start_date = start ? format(start, "yyyy-MM-dd") : null;
-      const p_end_date = end ? format(end, "yyyy-MM-dd") : null;
+      
+      // Format dates only if they exist
+      const p_start_date = start ? format(start, "yyyy-MM-dd") : undefined;
+      const p_end_date = end ? format(end, "yyyy-MM-dd") : undefined;
+
+      // Prepare arguments object, only including non-undefined values
+      const dateArgs = {
+        ...(p_start_date && { p_start_date }),
+        ...(p_end_date && { p_end_date }),
+      };
 
       const [vouchersRes, activityRes, companyStatsRes] = await Promise.all([
-        supabase.rpc("get_all_vouchers_for_admin", { p_start_date, p_end_date }),
+        supabase.rpc("get_all_vouchers_for_admin", dateArgs),
         supabase.rpc("get_voucher_activity_for_admin", {
-          p_start_date: start ? format(start, "yyyy-MM-dd") : '1970-01-01',
-          p_end_date: end ? format(end, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+          p_start_date: p_start_date || '1970-01-01', // Activity chart requires non-null dates
+          p_end_date: p_end_date || format(new Date(), "yyyy-MM-dd"),
         }),
-        supabase.rpc("get_company_voucher_stats", { p_start_date, p_end_date })
+        supabase.rpc("get_company_voucher_stats", dateArgs)
       ]);
 
       if (vouchersRes.error) throw vouchersRes.error;

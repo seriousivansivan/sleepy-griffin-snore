@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
+import { format } from "date-fns";
 
 type UserProfile = {
   id: string;
@@ -51,10 +52,22 @@ export function AdminVoucherList() {
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
+      const { start, end } = calculateDateRange(timeRange);
+      
+      // Format dates only if they exist
+      const p_start_date = start ? format(start, "yyyy-MM-dd") : undefined;
+      const p_end_date = end ? format(end, "yyyy-MM-dd") : undefined;
+
+      // Prepare arguments object, only including non-undefined values
+      const dateArgs = {
+        ...(p_start_date && { p_start_date }),
+        ...(p_end_date && { p_end_date }),
+      };
+
       const [usersRes, companiesRes, vouchersRes] = await Promise.all([
         supabase.from("profiles").select("id, user_name").order("user_name"),
         supabase.from("companies").select("id, name").order("name"),
-        supabase.rpc("get_all_vouchers_for_admin"),
+        supabase.rpc("get_all_vouchers_for_admin", dateArgs),
       ]);
 
       if (usersRes.error) throw usersRes.error;
@@ -91,7 +104,7 @@ export function AdminVoucherList() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, timeRange]); // Added timeRange to dependencies to refetch when filter changes
 
   useEffect(() => {
     fetchInitialData();
@@ -99,14 +112,9 @@ export function AdminVoucherList() {
 
   useEffect(() => {
     let vouchers = [...allVouchers];
-    const { start, end } = calculateDateRange(timeRange);
+    // Note: Date filtering is now handled by the RPC function based on `timeRange`
+    // We only need to apply client-side filters here (user, company, search)
 
-    if (start && end) {
-      vouchers = vouchers.filter((v) => {
-        const voucherDate = new Date(v.created_at);
-        return voucherDate >= start && voucherDate <= end;
-      });
-    }
     if (selectedUser !== "all") {
       vouchers = vouchers.filter((v) => v.user?.id === selectedUser);
     }
@@ -121,7 +129,7 @@ export function AdminVoucherList() {
 
     setFilteredVouchers(vouchers);
     setCurrentPage(1);
-  }, [timeRange, selectedUser, selectedCompany, searchPayTo, allVouchers]);
+  }, [selectedUser, selectedCompany, searchPayTo, allVouchers]);
 
   const totalPages = useMemo(
     () => Math.ceil(filteredVouchers.length / 10),

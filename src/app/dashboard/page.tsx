@@ -9,6 +9,7 @@ import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
 import { Shield } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const VOUCHERS_PER_PAGE = 10;
 
@@ -83,17 +84,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-background">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
         <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
               Welcome back, {profile.user_name}.
             </p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               Remaining Credit:{" "}
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">
                 {profile.has_unlimited_credit
                   ? "Unlimited"
                   : profile.credit.toLocaleString(undefined, {
@@ -113,6 +114,7 @@ export default function DashboardPage() {
               </Button>
             )}
             <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
+            <ThemeToggle />
             <UserNav />
           </div>
         </header>

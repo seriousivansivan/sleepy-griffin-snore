@@ -16,7 +16,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r bg-gray-50/50 hidden md:block">
+    <aside className="w-64 flex-shrink-0 border-r bg-gray-50/50 dark:bg-card hidden md:block">
       <div className="flex h-full min-h-screen flex-col gap-2">
         <div className="flex h-16 items-center border-b px-6">
           <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold">
@@ -31,8 +31,8 @@ export function AdminSidebar() {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900",
-                  pathname === href && "bg-gray-200 text-gray-900"
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                  pathname === href && "bg-muted text-primary"
                 )}
               >
                 <Icon className="h-4 w-4" />

@@ -51,20 +51,19 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    // Proactively fetch the session on initial load. This is faster than waiting for onAuthStateChange.
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    setLoading(true);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       await fetchProfile(session);
-      setLoading(false);
-    };
 
-    getInitialSession();
-
-    // Set up a listener for subsequent auth state changes (e.g., sign out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      await fetchProfile(session);
+      // The INITIAL_SESSION event is fired only once when the client is initialized.
+      // This is the perfect moment to stop the loading state.
+      if (event === "INITIAL_SESSION") {
+        setLoading(false);
+      }
     });
 
     return () => {

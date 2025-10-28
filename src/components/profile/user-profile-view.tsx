@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/time-filter";
+import { formatISO } from "date-fns";
 
 type Company = {
   id: string;
@@ -20,18 +22,31 @@ export function UserProfileView() {
   const [associatedCompanies, setAssociatedCompanies] = useState<Company[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterRange, setFilterRange] = useState<TimeRange>("all");
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (range: TimeRange) => {
     if (!profile) return;
     setDataLoading(true);
 
+    const { start, end } = calculateDateRange(range);
+
     try {
-      const { data: voucherData, error: voucherError } = await supabase
+      let voucherQuery = supabase
         .from("vouchers")
         .select(`*, companies(name, logo_url)`)
         .order("created_at", { ascending: false });
+
+      if (start) {
+        voucherQuery = voucherQuery.gte('created_at', formatISO(start));
+      }
+      if (end) {
+        voucherQuery = voucherQuery.lte('created_at', formatISO(end));
+      }
+
+      const { data: voucherData, error: voucherError } = await voucherQuery;
       if (voucherError) throw voucherError;
       setVouchers(voucherData || []);
+      setCurrentPage(1);
 
       const companyIds = profile.user_companies.map((uc) => uc.company_id);
       if (companyIds.length > 0) {
@@ -52,9 +67,9 @@ export function UserProfileView() {
 
   useEffect(() => {
     if (!authLoading) {
-      fetchData();
+      fetchData(filterRange);
     }
-  }, [authLoading, fetchData]);
+  }, [authLoading, fetchData, filterRange]);
 
   const totalPages = Math.ceil(vouchers.length / 10);
   const handlePageChange = (page: number) => {
@@ -147,6 +162,9 @@ export function UserProfileView() {
       </div>
 
       <div className="lg:col-span-2 space-y-6">
+        <div className="flex justify-end">
+          <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
+        </div>
         <VoucherCompanyDistributionChart vouchers={vouchers} isLoading={dataLoading} />
         <VoucherList
           vouchers={vouchers}

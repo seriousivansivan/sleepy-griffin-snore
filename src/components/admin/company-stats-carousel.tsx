@@ -1,8 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import React from "react";
-import Autoplay from "embla-carousel-autoplay";
 import {
   Carousel,
   CarouselContent,
@@ -28,10 +26,6 @@ type CompanyStatsCarouselProps = {
 };
 
 export function CompanyStatsCarousel({ stats, isLoading }: CompanyStatsCarouselProps) {
-  const plugin = React.useRef(
-    Autoplay({ delay: 2000, stopOnInteraction: true })
-  );
-
   if (isLoading) {
     return (
       <div>
@@ -60,12 +54,8 @@ export function CompanyStatsCarousel({ stats, isLoading }: CompanyStatsCarouselP
     <div>
       <h2 className="text-2xl font-semibold mb-4">Company Breakdown</h2>
       <Carousel
-        plugins={[plugin.current]}
-        onMouseEnter={plugin.current.stop}
-        onMouseLeave={plugin.current.reset}
         opts={{
           align: "start",
-          loop: true,
           dragFree: true,
         }}
         className="w-full"

@@ -30,35 +30,20 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <div className="w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden grid md:grid-cols-2 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
         {/* Left Column (Branding) */}
-        <div className="hidden md:flex flex-col justify-between p-8 bg-primary text-primary-foreground relative">
-          {/* GIF Background/Main Visual */}
-          <div className="absolute inset-0 z-0">
+        <div className="hidden md:flex flex-col justify-between p-8 bg-primary text-primary-foreground">
+          <div className="flex items-center gap-3">
             <Image
-              src="/Login.gif"
-              alt="Login Animation"
-              fill
-              style={{ objectFit: 'cover' }}
-              className="opacity-50"
-              unoptimized
+              src="/siLogo.png"
+              alt="App Logo"
+              width={40}
+              height={40}
+              className="bg-white p-1 rounded-md"
             />
+            <span className="text-xl font-bold">Petty Cash Voucher System</span>
           </div>
-          
-          {/* Content Overlay */}
-          <div className="relative z-10 flex flex-col justify-between h-full">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/siLogo.png"
-                alt="App Logo"
-                width={40}
-                height={40}
-                className="bg-white p-1 rounded-md"
-              />
-              <span className="text-xl font-bold">Petty Cash Voucher System</span>
-            </div>
-            <p className="text-sm text-primary-foreground/80">
-              Streamline your expense management with ease and precision.
-            </p>
-          </div>
+          <p className="text-sm text-primary-foreground/80">
+            Streamline your expense management with ease and precision.
+          </p>
         </div>
 
         {/* Right Column (Form) */}

@@ -71,6 +71,7 @@ export function UserProfileView() {
     }
   }, [authLoading, fetchData, filterRange]);
 
+  const totalVoucherAmount = vouchers.reduce((sum, v) => sum + v.total_amount, 0);
   const totalPages = Math.ceil(vouchers.length / 10);
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -165,7 +166,34 @@ export function UserProfileView() {
         <div className="flex justify-end">
           <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
         </div>
-        <VoucherCompanyDistributionChart vouchers={vouchers} isLoading={dataLoading} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Vouchers Created
+              </CardTitle>
+              <span className="text-sm font-semibold text-muted-foreground">THB</span>
+            </CardHeader>
+            <CardContent>
+              {dataLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="text-2xl font-bold">
+                  {totalVoucherAmount.toLocaleString(undefined, {
+                    style: "currency",
+                    currency: "THB",
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {vouchers.length} vouchers in total
+              </p>
+            </CardContent>
+          </Card>
+          <VoucherCompanyDistributionChart vouchers={vouchers} isLoading={dataLoading} />
+        </div>
         <VoucherList
           vouchers={vouchers}
           isLoading={dataLoading}

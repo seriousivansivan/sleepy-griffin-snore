@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
+import { format } from "date-fns";
 
 type UserProfile = {
   id: string;
@@ -48,13 +49,19 @@ export function AdminVoucherList() {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
 
-  const fetchInitialData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const { start, end } = calculateDateRange(timeRange);
+      const p_start_date = start ? format(start, "yyyy-MM-dd") : null;
+      const p_end_date = end ? format(end, "yyyy-MM-dd") : null;
+
+      const rpcArgs = { p_start_date, p_end_date };
+
       const [usersRes, companiesRes, vouchersRes] = await Promise.all([
         supabase.from("profiles").select("id, user_name").order("user_name"),
         supabase.from("companies").select("id, name").order("name"),
-        supabase.rpc("get_all_vouchers_for_admin"),
+        supabase.rpc("get_all_vouchers_for_admin", rpcArgs),
       ]);
 
       if (usersRes.error) throw usersRes.error;
@@ -91,22 +98,15 @@ export function AdminVoucherList() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, timeRange]);
 
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     let vouchers = [...allVouchers];
-    const { start, end } = calculateDateRange(timeRange);
-
-    if (start && end) {
-      vouchers = vouchers.filter((v) => {
-        const voucherDate = new Date(v.created_at);
-        return voucherDate >= start && voucherDate <= end;
-      });
-    }
+    
     if (selectedUser !== "all") {
       vouchers = vouchers.filter((v) => v.user?.id === selectedUser);
     }
@@ -121,7 +121,7 @@ export function AdminVoucherList() {
 
     setFilteredVouchers(vouchers);
     setCurrentPage(1);
-  }, [timeRange, selectedUser, selectedCompany, searchPayTo, allVouchers]);
+  }, [selectedUser, selectedCompany, searchPayTo, allVouchers]);
 
   const totalPages = useMemo(
     () => Math.ceil(filteredVouchers.length / 10),
@@ -138,7 +138,7 @@ export function AdminVoucherList() {
     <div className="space-y-6">
       <Card>
         <CardContent className="p-4">
-          {loading ? (
+          {loading && allUsers.length === 0 ? ( // Show skeleton only on initial load
             <Skeleton className="h-10 w-full" />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -176,7 +176,7 @@ export function AdminVoucherList() {
                   ))}
                 </SelectContent>
               </Select>
-              <TimeFilter range={timeRange} onRangeChange={setTimeRange} />
+              <TimeFilter range={timeRange} onValueChange={setTimeRange} />
             </div>
           )}
         </CardContent>

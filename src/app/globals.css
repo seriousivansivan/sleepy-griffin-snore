@@ -139,23 +139,19 @@
     --sidebar-ring: 217.2 91.2% 59.8%}
 }
 
-/* Custom CSS for Animated Login Background */
-@keyframes gradient-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+/* Custom CSS for Finance/Ledger Background */
+.finance-grid-bg {
+  background-color: hsl(var(--background));
+  background-image: linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+                    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
-.animated-gradient-bg {
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 400% 400%;
-  animation: gradient-shift 15s ease infinite;
+.dark .finance-grid-bg {
+  background-color: hsl(var(--background));
+  background-image: linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+                    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 

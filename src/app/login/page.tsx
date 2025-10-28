@@ -27,9 +27,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center animated-gradient-bg p-4">
+    <div className="min-h-screen flex items-center justify-center finance-grid-bg p-4">
       <div className="max-w-md w-full space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
-        <div className="text-center text-white">
+        <div className="text-center text-foreground">
           <Image
             src="/siLogo.png"
             alt="App Logo"
@@ -40,11 +40,11 @@ export default function LoginPage() {
           <h2 className="text-4xl font-extrabold tracking-tight">
             Welcome Back
           </h2>
-          <p className="mt-2 text-lg opacity-80">
+          <p className="mt-2 text-lg text-muted-foreground">
             Sign in to manage your petty cash vouchers.
           </p>
         </div>
-        <div className="p-8 rounded-xl shadow-2xl backdrop-blur-md bg-white/10 border border-white/20">
+        <div className="p-8 rounded-xl shadow-2xl backdrop-blur-md bg-card/80 border border-border">
           <Auth
             supabaseClient={supabase}
             appearance={{
@@ -54,11 +54,11 @@ export default function LoginPage() {
                   colors: {
                     brand: "hsl(var(--primary))",
                     brandAccent: "hsl(var(--primary-foreground))",
-                    // Customizing the Auth component to fit the dark/glass theme
-                    inputBackground: "rgba(255, 255, 255, 0.1)",
-                    inputBorder: "rgba(255, 255, 255, 0.3)",
-                    inputLabelText: "hsl(0 0% 98%)",
-                    inputText: "hsl(0 0% 98%)",
+                    // Customizing the Auth component to fit the light/dark theme
+                    inputBackground: "hsl(var(--input))",
+                    inputBorder: "hsl(var(--border))",
+                    inputLabelText: "hsl(var(--foreground))",
+                    inputText: "hsl(var(--foreground))",
                     defaultButtonBackground: "hsl(var(--primary))",
                     defaultButtonText: "hsl(var(--primary-foreground))",
                     defaultButtonBackgroundHover: "hsl(var(--primary) / 0.9)",
@@ -71,7 +71,7 @@ export default function LoginPage() {
               },
             }}
             providers={[]}
-            theme="dark" // Use dark theme for better contrast against the background
+            theme="light" // Switching back to light theme for better compatibility with the new background/card style
           />
         </div>
       </div>

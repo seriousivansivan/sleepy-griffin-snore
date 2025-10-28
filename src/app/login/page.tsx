@@ -28,7 +28,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center finance-grid-bg p-4">
-      <div className="max-w-md w-full space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
+      <div className="max-w-md w-full space-y-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
         <div className="text-center text-foreground">
           <Image
             src="/siLogo.png"

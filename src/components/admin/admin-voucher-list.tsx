@@ -63,11 +63,14 @@ export function AdminVoucherList() {
         ...(p_start_date && { p_start_date }),
         ...(p_end_date && { p_end_date }),
       };
+      
+      // Determine RPC call arguments
+      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : {};
 
       const [usersRes, companiesRes, vouchersRes] = await Promise.all([
         supabase.from("profiles").select("id, user_name").order("user_name"),
         supabase.from("companies").select("id, name").order("name"),
-        supabase.rpc("get_all_vouchers_for_admin", dateArgs),
+        supabase.rpc("get_all_vouchers_for_admin", rpcArgs),
       ]);
 
       if (usersRes.error) throw usersRes.error;

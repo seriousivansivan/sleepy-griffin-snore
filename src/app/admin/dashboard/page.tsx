@@ -57,14 +57,17 @@ export default function AdminDashboardPage() {
         ...(p_start_date && { p_start_date }),
         ...(p_end_date && { p_end_date }),
       };
+      
+      // Determine RPC call arguments for functions that accept optional dates
+      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : {};
 
       const [vouchersRes, activityRes, companyStatsRes] = await Promise.all([
-        supabase.rpc("get_all_vouchers_for_admin", dateArgs),
+        supabase.rpc("get_all_vouchers_for_admin", rpcArgs),
         supabase.rpc("get_voucher_activity_for_admin", {
           p_start_date: p_start_date || '1970-01-01', // Activity chart requires non-null dates
           p_end_date: p_end_date || format(new Date(), "yyyy-MM-dd"),
         }),
-        supabase.rpc("get_company_voucher_stats", dateArgs)
+        supabase.rpc("get_company_voucher_stats", rpcArgs)
       ]);
 
       if (vouchersRes.error) throw vouchersRes.error;

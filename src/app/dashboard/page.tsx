@@ -53,10 +53,12 @@ export default function DashboardPage() {
   }, [supabase]);
 
   useEffect(() => {
-    if (!loading && session) {
+    // We now wait for the profile to be loaded, not just the session.
+    // This makes the data fetch more reliable on client-side navigation.
+    if (!loading && profile) {
       fetchVouchers();
     }
-  }, [session?.user.id, loading, fetchVouchers]);
+  }, [loading, profile, fetchVouchers]);
 
   const totalPages = useMemo(() => {
     return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);

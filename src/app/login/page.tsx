@@ -26,6 +26,10 @@ export default function LoginPage() {
     );
   }
 
+  // Fixed blue color HSL values for the button
+  const fixedBlue = "210 40% 50%"; // A moderate blue
+  const fixedBlueHover = "210 40% 40%";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted p-4">
       <div className="w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden grid md:grid-cols-2 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
@@ -75,15 +79,15 @@ export default function LoginPage() {
                 variables: {
                   default: {
                     colors: {
-                      brand: "hsl(var(--primary))",
-                      brandAccent: "hsl(var(--primary-foreground))",
+                      brand: `hsl(${fixedBlue})`,
+                      brandAccent: `hsl(${fixedBlueHover})`,
                       inputBackground: "hsl(var(--input))",
                       inputBorder: "hsl(var(--border))",
                       inputLabelText: "hsl(var(--foreground))",
                       inputText: "hsl(var(--foreground))",
-                      defaultButtonBackground: "hsl(var(--primary))",
-                      defaultButtonText: "hsl(var(--primary-foreground))",
-                      defaultButtonBackgroundHover: "hsl(var(--primary) / 0.9)",
+                      defaultButtonBackground: `hsl(${fixedBlue})`,
+                      defaultButtonText: "hsl(0 0% 98%)", // Fixed white text
+                      defaultButtonBackgroundHover: `hsl(${fixedBlueHover})`,
                     },
                     radii: {
                       borderRadiusButton: "0.5rem",

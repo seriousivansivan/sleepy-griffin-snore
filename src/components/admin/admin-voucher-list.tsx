@@ -59,13 +59,12 @@ export function AdminVoucherList() {
       const p_end_date = end ? format(end, "yyyy-MM-dd") : undefined;
 
       // Prepare arguments object, only including non-undefined values
-      const dateArgs = {
-        ...(p_start_date && { p_start_date }),
-        ...(p_end_date && { p_end_date }),
-      };
+      const dateArgs: { p_start_date?: string; p_end_date?: string } = {};
+      if (p_start_date) dateArgs.p_start_date = p_start_date;
+      if (p_end_date) dateArgs.p_end_date = p_end_date;
       
-      // Determine RPC call arguments
-      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : {};
+      // Determine RPC call arguments: pass the object if it has keys, otherwise pass undefined
+      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : undefined;
 
       const [usersRes, companiesRes, vouchersRes] = await Promise.all([
         supabase.from("profiles").select("id, user_name").order("user_name"),

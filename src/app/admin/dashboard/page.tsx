@@ -53,13 +53,12 @@ export default function AdminDashboardPage() {
       const p_end_date = end ? format(end, "yyyy-MM-dd") : undefined;
 
       // Prepare arguments object, only including non-undefined values
-      const dateArgs = {
-        ...(p_start_date && { p_start_date }),
-        ...(p_end_date && { p_end_date }),
-      };
+      const dateArgs: { p_start_date?: string; p_end_date?: string } = {};
+      if (p_start_date) dateArgs.p_start_date = p_start_date;
+      if (p_end_date) dateArgs.p_end_date = p_end_date;
       
-      // Determine RPC call arguments for functions that accept optional dates
-      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : {};
+      // Determine RPC call arguments: pass the object if it has keys, otherwise pass undefined
+      const rpcArgs = Object.keys(dateArgs).length > 0 ? dateArgs : undefined;
 
       const [vouchersRes, activityRes, companyStatsRes] = await Promise.all([
         supabase.rpc("get_all_vouchers_for_admin", rpcArgs),

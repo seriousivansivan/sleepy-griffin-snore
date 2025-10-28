@@ -48,7 +48,7 @@ export default function LoginPage() {
               src="/Login.gif"
               alt="Login Animation"
               className="max-w-full h-auto"
-              style={{ maxHeight: '300px' }}
+              style={{ maxHeight: '200px' }}
             />
           </div>
 

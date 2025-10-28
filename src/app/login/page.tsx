@@ -41,6 +41,17 @@ export default function LoginPage() {
             />
             <span className="text-xl font-bold">Petty Cash Voucher System</span>
           </div>
+          
+          {/* Animated GIF */}
+          <div className="flex justify-center items-center py-8">
+            <img
+              src="/Login.gif"
+              alt="Login Animation"
+              className="max-w-full h-auto"
+              style={{ maxHeight: '300px' }}
+            />
+          </div>
+
           <p className="text-sm text-primary-foreground/80">
             Streamline your expense management with ease and precision.
           </p>

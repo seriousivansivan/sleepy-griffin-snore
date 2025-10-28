@@ -11,6 +11,7 @@ import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-comp
 import { VoucherActivityChart } from "@/components/admin/voucher-activity-chart";
 import type { Voucher } from "@/components/voucher-list";
 import { format } from "date-fns";
+import { CompanyStatsCarousel, CompanyStat } from "@/components/admin/company-stats-carousel";
 
 type DashboardStats = {
   users: number;
@@ -33,6 +34,7 @@ export default function AdminDashboardPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("this_month");
   const [chartVouchers, setChartVouchers] = useState<Voucher[]>([]);
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
+  const [companyStats, setCompanyStats] = useState<CompanyStat[]>([]);
   const [chartsLoading, setChartsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,21 +43,25 @@ export default function AdminDashboardPage() {
     }
   }, [session, loading, profile, router]);
 
-  const fetchChartData = useCallback(async (range: TimeRange) => {
+  const fetchDashboardData = useCallback(async (range: TimeRange) => {
     setChartsLoading(true);
     try {
       const { start, end } = calculateDateRange(range);
       const p_start_date = start ? format(start, "yyyy-MM-dd") : null;
       const p_end_date = end ? format(end, "yyyy-MM-dd") : null;
 
-      const { data: vouchersRes, error: vouchersError } = await supabase.rpc(
-        "get_all_vouchers_for_admin",
-        { p_start_date, p_end_date }
-      );
-      if (vouchersError) throw vouchersError;
+      const [vouchersRes, activityRes, companyStatsRes] = await Promise.all([
+        supabase.rpc("get_all_vouchers_for_admin", { p_start_date, p_end_date }),
+        supabase.rpc("get_voucher_activity_for_admin", {
+          p_start_date: start ? format(start, "yyyy-MM-dd") : '1970-01-01',
+          p_end_date: end ? format(end, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        }),
+        supabase.rpc("get_company_voucher_stats", { p_start_date, p_end_date })
+      ]);
 
-      if (vouchersRes && vouchersRes.length > 0) {
-        const companyIds = [...new Set(vouchersRes.map((v: any) => v.company_id))];
+      if (vouchersRes.error) throw vouchersRes.error;
+      if (vouchersRes.data && vouchersRes.data.length > 0) {
+        const companyIds = [...new Set(vouchersRes.data.map((v: any) => v.company_id))];
         const { data: companiesData, error: companiesError } = await supabase
           .from("companies")
           .select("id, name")
@@ -63,7 +69,7 @@ export default function AdminDashboardPage() {
         if (companiesError) throw companiesError;
         
         const companyMap = new Map(companiesData.map(c => [c.id, c]));
-        const formattedVouchers = vouchersRes.map((v: any) => ({
+        const formattedVouchers = vouchersRes.data.map((v: any) => ({
           ...v,
           details: v.details as Voucher["details"],
           companies: companyMap.get(v.company_id) || null,
@@ -74,19 +80,15 @@ export default function AdminDashboardPage() {
         setChartVouchers([]);
       }
 
-      const { data: activityRes, error: activityError } = await supabase.rpc(
-        "get_voucher_activity_for_admin",
-        {
-          p_start_date: start ? format(start, "yyyy-MM-dd") : '1970-01-01',
-          p_end_date: end ? format(end, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
-        }
-      );
-      if (activityError) throw activityError;
-      setActivityData(activityRes || []);
+      if (activityRes.error) throw activityRes.error;
+      setActivityData(activityRes.data || []);
+
+      if (companyStatsRes.error) throw companyStatsRes.error;
+      setCompanyStats(companyStatsRes.data || []);
 
     } catch (error) {
-      console.error("Error fetching chart data:", error);
-      toast.error("Failed to load chart data.");
+      console.error("Error fetching dashboard data:", error);
+      toast.error("Failed to load dashboard data.");
     } finally {
       setChartsLoading(false);
     }
@@ -109,9 +111,9 @@ export default function AdminDashboardPage() {
 
     if (profile?.role === "admin") {
       fetchStats();
-      fetchChartData(timeRange);
+      fetchDashboardData(timeRange);
     }
-  }, [profile, timeRange, fetchChartData, supabase]);
+  }, [profile, timeRange, fetchDashboardData, supabase]);
 
   if (loading || !session || profile?.role !== "admin") {
     return (
@@ -148,15 +150,19 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">Activity Overview</h2>
-          <TimeFilter range={timeRange} onRangeChange={setTimeRange} />
+      <div className="space-y-8">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Activity Overview</h2>
+            <TimeFilter range={timeRange} onRangeChange={setTimeRange} />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <VoucherActivityChart data={activityData} isLoading={chartsLoading} />
+            <VoucherCompanyDistributionChart vouchers={chartVouchers} isLoading={chartsLoading} />
+          </div>
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <VoucherActivityChart data={activityData} isLoading={chartsLoading} />
-          <VoucherCompanyDistributionChart vouchers={chartVouchers} isLoading={chartsLoading} />
-        </div>
+
+        <CompanyStatsCarousel stats={companyStats} isLoading={chartsLoading} />
       </div>
     </div>
   );

@@ -27,52 +27,64 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center finance-grid-bg p-4">
-      <div className="max-w-md w-full space-y-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
-        <div className="text-center text-foreground">
-          <Image
-            src="/siLogo.png"
-            alt="App Logo"
-            width={64}
-            height={64}
-            className="mx-auto mb-4"
-          />
-          <h2 className="text-4xl font-extrabold tracking-tight">
-            Welcome Back
-          </h2>
-          <p className="mt-2 text-lg text-muted-foreground">
-            Sign in to manage your petty cash vouchers.
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
+      <div className="w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden grid md:grid-cols-2 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
+        {/* Left Column (Branding) */}
+        <div className="hidden md:flex flex-col justify-between p-8 bg-primary text-primary-foreground">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/siLogo.png"
+              alt="App Logo"
+              width={40}
+              height={40}
+              className="bg-white p-1 rounded-md"
+            />
+            <span className="text-xl font-bold">Petty Cash Voucher System</span>
+          </div>
+          <p className="text-sm text-primary-foreground/80">
+            Streamline your expense management with ease and precision.
           </p>
         </div>
-        <div className="p-8 rounded-xl shadow-2xl backdrop-blur-md bg-card/80 border border-border">
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: "hsl(var(--primary))",
-                    brandAccent: "hsl(var(--primary-foreground))",
-                    // Customizing the Auth component to fit the light/dark theme
-                    inputBackground: "hsl(var(--input))",
-                    inputBorder: "hsl(var(--border))",
-                    inputLabelText: "hsl(var(--foreground))",
-                    inputText: "hsl(var(--foreground))",
-                    defaultButtonBackground: "hsl(var(--primary))",
-                    defaultButtonText: "hsl(var(--primary-foreground))",
-                    defaultButtonBackgroundHover: "hsl(var(--primary) / 0.9)",
-                  },
-                  radii: {
-                    borderRadiusButton: "0.5rem",
-                    inputBorderRadius: "0.5rem",
+
+        {/* Right Column (Form) */}
+        <div className="p-8 bg-card">
+          <div className="mx-auto w-full max-w-sm space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold tracking-tight">
+                Welcome Back
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Sign in to manage your petty cash vouchers.
+              </p>
+            </div>
+            <Auth
+              supabaseClient={supabase}
+              appearance={{
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: "hsl(var(--primary))",
+                      brandAccent: "hsl(var(--primary-foreground))",
+                      inputBackground: "hsl(var(--input))",
+                      inputBorder: "hsl(var(--border))",
+                      inputLabelText: "hsl(var(--foreground))",
+                      inputText: "hsl(var(--foreground))",
+                      defaultButtonBackground: "hsl(var(--primary))",
+                      defaultButtonText: "hsl(var(--primary-foreground))",
+                      defaultButtonBackgroundHover: "hsl(var(--primary) / 0.9)",
+                    },
+                    radii: {
+                      borderRadiusButton: "0.5rem",
+                      inputBorderRadius: "0.5rem",
+                    },
                   },
                 },
-              },
-            }}
-            providers={[]}
-            theme="light" // Switching back to light theme for better compatibility with the new background/card style
-          />
+              }}
+              providers={[]}
+              theme="light"
+            />
+          </div>
         </div>
       </div>
     </div>

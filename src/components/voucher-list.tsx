@@ -200,7 +200,7 @@ export function VoucherList({
           {vouchers.length === 0 ? (
             <div className="text-center py-12 px-6">
               <p className="text-gray-500">
-                No vouchers found.
+                No vouchers found for this user.
               </p>
             </div>
           ) : (

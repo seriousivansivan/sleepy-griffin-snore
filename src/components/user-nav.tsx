@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
+import Link from "next/link";
 
 export function UserNav() {
-  const { profile, supabase } = useSupabaseAuth();
+  const { profile, session, supabase } = useSupabaseAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -49,9 +50,18 @@ export function UserNav() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{profile?.user_name}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {session?.user.email}
+            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile">
+            <User className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>

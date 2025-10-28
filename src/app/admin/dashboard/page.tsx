@@ -10,7 +10,7 @@ import { TimeFilter, TimeRange, calculateDateRange } from "@/components/admin/ti
 import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-company-distribution-chart";
 import { VoucherActivityChart } from "@/components/admin/voucher-activity-chart";
 import type { Voucher } from "@/components/voucher-list";
-import { format } from "date-fns";
+import { formatISO } from "date-fns";
 import { CompanyStatsCarousel, CompanyStat } from "@/components/admin/company-stats-carousel";
 
 type DashboardStats = {
@@ -47,14 +47,14 @@ export default function AdminDashboardPage() {
     setChartsLoading(true);
     try {
       const { start, end } = calculateDateRange(range);
-      const p_start_date = start ? format(start, "yyyy-MM-dd") : null;
-      const p_end_date = end ? format(end, "yyyy-MM-dd") : null;
+      const p_start_date = start ? formatISO(start) : null;
+      const p_end_date = end ? formatISO(end) : null;
 
       const [vouchersRes, activityRes, companyStatsRes] = await Promise.all([
         supabase.rpc("get_all_vouchers_for_admin", { p_start_date, p_end_date }),
         supabase.rpc("get_voucher_activity_for_admin", {
-          p_start_date: start ? format(start, "yyyy-MM-dd") : '1970-01-01',
-          p_end_date: end ? format(end, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+          p_start_date: start ? formatISO(start) : formatISO(new Date(0)), // Use epoch for start if null
+          p_end_date: end ? formatISO(end) : formatISO(new Date()),       // Use now for end if null
         }),
         supabase.rpc("get_company_voucher_stats", { p_start_date, p_end_date })
       ]);

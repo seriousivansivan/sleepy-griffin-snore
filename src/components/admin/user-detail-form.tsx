@@ -64,7 +64,8 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
     defaultValues: {
       role: user.role as "user" | "admin",
       monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
-      has_unlimited_credit: user.has_unlimited_credit ?? false, // Fixed: Ensure boolean fallback
+      // FIX: Explicitly check for true to ensure a strict boolean default value
+      has_unlimited_credit: user.has_unlimited_credit === true, 
       companyIds: user.user_companies.map((uc) => uc.company_id),
     },
   });
@@ -303,7 +304,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                   <span className="font-medium">
                     {user.has_unlimited_credit
                       ? "Unlimited"
-                      : user.credit.toLocaleString(undefined, {
+                      : (user.credit ?? 0).toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}

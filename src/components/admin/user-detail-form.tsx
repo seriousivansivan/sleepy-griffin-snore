@@ -38,7 +38,9 @@ const formSchema = z.object({
     .number()
     .min(0, "Allowance cannot be negative."),
   has_unlimited_credit: z.boolean(),
-  companyIds: z.array(z.string()).default([]),
+  // By removing .default([]), we force the schema to expect a required string[],
+  // which aligns with the type provided in defaultValues.
+  companyIds: z.array(z.string()), 
 });
 
 type Company = {
@@ -64,7 +66,9 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
     defaultValues: {
       role: user.role as "user" | "admin",
       monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
+      // Ensure boolean is never null/undefined
       has_unlimited_credit: user.has_unlimited_credit ?? false,
+      // Ensure array is never null/undefined
       companyIds: user.user_companies?.map((uc) => uc.company_id) ?? [],
     },
   });

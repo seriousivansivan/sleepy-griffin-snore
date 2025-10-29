@@ -169,8 +169,15 @@ export function VoucherList({
       }
 
       // Show last page if it's not page 1 and not already shown
-      if (totalPages > 1 && totalPages !== 1) {
-        if (totalPages !== 1 && !items.some(item => item.key === totalPages)) {
+      if (totalPages > 1) {
+        // Check if the last page item (key=totalPages) is already in the list
+        const isLastPageShown = items.some(item => {
+          // Safely compare the key (which can be string or number) to totalPages (number)
+          const key = item.key;
+          return key !== null && key !== undefined && Number(key) === totalPages;
+        });
+
+        if (!isLastPageShown) {
           items.push(
             <PaginationItem key={totalPages}>
               <PaginationLink

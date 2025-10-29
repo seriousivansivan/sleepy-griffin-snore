@@ -1,115 +1,174 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { VoucherList, Voucher } from "@/components/voucher-list";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { toast } from "sonner";
+import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-company-distribution-chart";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IndianRupee } from "lucide-react";
-import { VoucherCompanyDistributionChart } from "./voucher-company-distribution-chart";
-import { TimeFilter, TimeRange, calculateDateRange } from "./time-filter"; // Import new components
-import { formatISO } from "date-fns";
+import { toast } from "sonner";
+import {
+  TimeFilter,
+  TimeRange,
+  calculateDateRange,
+} from "@/components/admin/time-filter";
+import { formatISO, format, parseISO } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 type UserActivityOverviewProps = {
   userId: string;
-  userName: string | null;
 };
 
-// Define the structure of the raw data returned by the RPC function
-type RawVoucher = Omit<Voucher, 'companies' | 'user'> & {
-  company_id: string;
-  user_id: string;
+const COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+        <p className="font-semibold">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={`item-${index}`} style={{ color: entry.color }}>
+            {`${entry.name}: ${entry.value.toLocaleString(undefined, {
+              style: "currency",
+              currency: "THB",
+            })}`}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
 };
 
-export function UserActivityOverview({ userId, userName }: UserActivityOverviewProps) {
+export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
   const { supabase } = useSupabaseAuth();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [vouchersLoading, setVouchersLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterRange, setFilterRange] = useState<TimeRange>("all"); // New state for filter
+  const [filterRange, setFilterRange] = useState<TimeRange>("all");
 
-  const fetchVouchers = useCallback(async (range: TimeRange) => {
-    setVouchersLoading(true);
-    
-    const { start, end } = calculateDateRange(range);
-    
-    // Format dates to ISO strings for PostgreSQL TIMESTAMP WITH TIME ZONE
-    const p_start_date = start ? formatISO(start) : null;
-    const p_end_date = end ? formatISO(end) : null;
+  const fetchData = useCallback(
+    async (range: TimeRange) => {
+      setDataLoading(true);
+      const { start, end } = calculateDateRange(range);
+      const p_start_date = start ? formatISO(start) : null;
+      const p_end_date = end ? formatISO(end) : null;
 
-    try {
-      // 1. Fetch raw voucher data using the RPC function (bypasses RLS for admin)
-      const { data: rawVouchers, error: rpcError } = await supabase.rpc(
-        "get_vouchers_by_user_id_for_admin",
-        { 
-          p_user_id: userId,
-          p_start_date: p_start_date,
-          p_end_date: p_end_date,
-        }
-      );
+      try {
+        const { data, error } = await supabase.rpc(
+          "get_vouchers_by_user_id_for_admin",
+          {
+            p_user_id: userId,
+            p_start_date,
+            p_end_date,
+          }
+        );
 
-      if (rpcError) {
-        throw rpcError;
-      }
+        if (error) throw error;
 
-      const rawData = rawVouchers as RawVoucher[];
+        // Since RPC returns a flat structure, we need to fetch company details separately
+        const companyIds = [...new Set(data.map((v: any) => v.company_id))];
+        const { data: companiesData, error: companiesError } = await supabase
+          .from("companies")
+          .select("id, name")
+          .in("id", companyIds);
+        if (companiesError) throw companiesError;
 
-      if (rawData.length === 0) {
-        setVouchers([]);
+        const companyMap = new Map(companiesData.map((c) => [c.id, c]));
+
+        const formattedVouchers = data.map((v: any) => ({
+          ...v,
+          details: v.details as Voucher["details"],
+          companies: companyMap.get(v.company_id) || null,
+          user: null, // User info is not needed here
+        }));
+
+        setVouchers(formattedVouchers || []);
         setCurrentPage(1);
-        setVouchersLoading(false);
-        return;
+      } catch (error) {
+        console.error("Error fetching user activity data:", error);
+        toast.error("Failed to load user activity data.");
+      } finally {
+        setDataLoading(false);
       }
-
-      // 2. Collect unique IDs for companies
-      const companyIds = Array.from(
-        new Set(rawData.map((v) => v.company_id))
-      );
-      
-      // 3. Fetch related company data
-      const { data: companiesData, error: companiesError } = await supabase
-        .from("companies")
-        .select("id, name, logo_url")
-        .in("id", companyIds);
-
-      if (companiesError) {
-        console.error("Error fetching related company data:", companiesError);
-        throw new Error("Failed to fetch related company data.");
-      }
-
-      const companyMap = new Map(
-        companiesData?.map((c) => [c.id, c])
-      );
-      
-      // 4. Map raw vouchers to the final Voucher type
-      const formattedVouchers: Voucher[] = rawData.map((v) => ({
-        ...v,
-        id: v.id,
-        total_amount: v.total_amount,
-        details: v.details as Voucher["details"],
-        created_at: v.created_at,
-        companies: companyMap.get(v.company_id) || null,
-        // Since we are in the context of a single user, we can hardcode the user object
-        user: { id: userId, user_name: userName }, 
-      }));
-
-      setVouchers(formattedVouchers);
-      setCurrentPage(1);
-    } catch (error) {
-      console.error("Error fetching user vouchers:", error);
-      toast.error("Failed to load user voucher history.");
-    } finally {
-      setVouchersLoading(false);
-    }
-  }, [supabase, userId, userName]);
+    },
+    [supabase, userId]
+  );
 
   useEffect(() => {
-    // Refetch data whenever the filter range changes
-    fetchVouchers(filterRange);
-  }, [fetchVouchers, filterRange]);
+    fetchData(filterRange);
+  }, [fetchData, filterRange]);
 
-  const totalPages = Math.ceil(vouchers.length / 10); // Assuming 10 VOUCHERS_PER_PAGE
+  const totalVoucherAmount = vouchers.reduce(
+    (sum, v) => sum + v.total_amount,
+    0
+  );
+  const totalPages = Math.ceil(vouchers.length / 10);
+
+  const { chartData, companyNames } = useMemo(() => {
+    if (vouchers.length === 0) return { chartData: [], companyNames: [] };
+
+    const isLongRange = filterRange === "this_year" || filterRange === "all";
+    const dateFormat = isLongRange ? "yyyy-MM" : "yyyy-MM-dd";
+
+    const dataMap = new Map<string, any>();
+    const uniqueCompanyNames = new Set<string>();
+
+    const sortedVouchers = [...vouchers].sort(
+      (a, b) =>
+        parseISO(a.details.date || a.created_at).getTime() -
+        parseISO(b.details.date || b.created_at).getTime()
+    );
+
+    sortedVouchers.forEach((voucher) => {
+      const companyName = voucher.companies?.name || "Unknown";
+      uniqueCompanyNames.add(companyName);
+
+      const date = parseISO(voucher.details.date || voucher.created_at);
+      const key = format(date, dateFormat);
+
+      if (!dataMap.has(key)) {
+        dataMap.set(key, {
+          date: format(date, isLongRange ? "MMM yyyy" : "dd MMM"),
+        });
+      }
+
+      const entry = dataMap.get(key);
+      entry[companyName] = (entry[companyName] || 0) + voucher.total_amount;
+    });
+
+    const finalCompanyNames = Array.from(uniqueCompanyNames);
+    const finalChartData = Array.from(dataMap.values()).map((entry) => {
+      finalCompanyNames.forEach((name) => {
+        if (!entry[name]) {
+          entry[name] = 0;
+        }
+      });
+      return entry;
+    });
+
+    return { chartData: finalChartData, companyNames: finalCompanyNames };
+  }, [vouchers, filterRange]);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -117,71 +176,100 @@ export function UserActivityOverview({ userId, userName }: UserActivityOverviewP
     }
   };
 
-  // Calculate total voucher amount for the stat card
-  const totalVoucherAmount = vouchers.reduce((sum, v) => sum + v.total_amount, 0);
-
   return (
-    <div className="space-y-6 h-full">
-      {/* Filter Header */}
-      <div className="flex justify-end">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between border-b p-4">
+        <CardTitle className="text-xl">User Activity Overview</CardTitle>
         <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
-      </div>
-
-      {/* Chart Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Vouchers Created
-            </CardTitle>
-            <span className="text-sm font-semibold text-muted-foreground">THB</span>
-          </CardHeader>
-          <CardContent>
-            {vouchersLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold">
-                {totalVoucherAmount.toLocaleString(undefined, {
-                  style: "currency",
-                  currency: "THB",
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        {/* Chart Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Vouchers Created
+              </CardTitle>
+              <span className="text-sm font-semibold text-muted-foreground">
+                THB
+              </span>
+            </CardHeader>
+            <CardContent>
+              {dataLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">
+                    {totalVoucherAmount.toLocaleString(undefined, {
+                      style: "currency",
+                      currency: "THB",
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {vouchers.length} vouchers in total
+                  </p>
+                </>
+              )}
+              <div className="h-60 p-2 -ml-4">
+                {dataLoading ? (
+                  <Skeleton className="h-full w-full" />
+                ) : chartData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    No data to display trend.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis
+                        tickFormatter={(value) =>
+                          new Intl.NumberFormat("en-US", {
+                            notation: "compact",
+                            compactDisplay: "short",
+                          }).format(value)
+                        }
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      {companyNames.map((companyName, index) => (
+                        <Line
+                          key={companyName}
+                          type="monotone"
+                          dataKey={companyName}
+                          stroke={COLORS[index % COLORS.length]}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              {vouchers.length} vouchers in total
-            </p>
-          </CardContent>
-        </Card>
-        
-        {/* Company Distribution Chart */}
-        <VoucherCompanyDistributionChart
-          vouchers={vouchers}
-          isLoading={vouchersLoading}
-        />
-      </div>
+            </CardContent>
+          </Card>
+          <VoucherCompanyDistributionChart
+            vouchers={vouchers}
+            isLoading={dataLoading}
+          />
+        </div>
 
-      {/* Voucher List Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{userName || "User"}'s Vouchers</CardTitle>
-          <CardDescription>
-            A list of all petty cash vouchers created by this user.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
+        {/* Voucher List Section */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Voucher History</h3>
           <VoucherList
             vouchers={vouchers}
-            isLoading={vouchersLoading}
+            isLoading={dataLoading}
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
-            showCreator={false} // Hide creator column since it's implicit
-            showActions={false} // Hide actions column (print button)
+            showCreator={false}
           />
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -57,6 +57,8 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     setLoading(true);
+    // This flag ensures we only set loading to false on the very first auth event.
+    let initialLoadHandled = false;
 
     const {
       data: { subscription },
@@ -64,10 +66,11 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       setSession(session);
       await fetchProfile(session);
 
-      // The INITIAL_SESSION event is fired only once when the client is initialized.
-      // This is the perfect moment to stop the loading state.
-      if (event === "INITIAL_SESSION") {
+      // Once the first auth event fires (whether it's INITIAL_SESSION or SIGNED_IN
+      // from a restored session), we can consider the initial auth check complete.
+      if (!initialLoadHandled) {
         setLoading(false);
+        initialLoadHandled = true;
       }
     });
 

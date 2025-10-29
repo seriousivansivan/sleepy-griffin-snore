@@ -37,7 +37,7 @@ const formSchema = z.object({
   monthly_credit_allowance: z.coerce
     .number()
     .min(0, "Allowance cannot be negative."),
-  has_unlimited_credit: z.boolean().default(false),
+  has_unlimited_credit: z.boolean(),
   companyIds: z.array(z.string()).default([]),
 });
 
@@ -64,8 +64,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
     defaultValues: {
       role: user.role as "user" | "admin",
       monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
-      // FIX: Explicitly check for true to ensure a strict boolean default value
-      has_unlimited_credit: user.has_unlimited_credit === true, 
+      has_unlimited_credit: user.has_unlimited_credit ?? false,
       companyIds: user.user_companies.map((uc) => uc.company_id),
     },
   });

@@ -3,70 +3,68 @@
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
 } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSupabaseAuth } from "./providers/supabase-auth-provider";
-import { getInitials } from "@/lib/utils";
+import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
+import { useRouter } from "next/navigation";
+import { LogOut, User } from "lucide-react";
 import Link from "next/link";
-import { Skeleton } from "./ui/skeleton";
 
 export function UserNav() {
-  const { profile, signOut, isLoaded } = useSupabaseAuth();
+  const { profile, session, supabase } = useSupabaseAuth();
+  const router = useRouter();
 
-  if (!isLoaded) {
-    return <Skeleton className="h-8 w-8 rounded-full" />;
-  }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
-  if (!profile) {
-    return (
-      <Button asChild>
-        <Link href="/login">Login</Link>
-      </Button>
-    );
-  }
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "U";
+    const names = name.split(' ');
+    if (names.length > 1 && names[names.length - 1]) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white">
-              {getInitials(profile?.user_name)}
-            </AvatarFallback>
+            <AvatarFallback>{getInitials(profile?.user_name)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {profile?.user_name}
-            </p>
+            <p className="text-sm font-medium leading-none">{profile?.user_name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {profile?.email}
+              {session?.user.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <Link href="/profile">
-            <DropdownMenuItem>
-              Profile
-            </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile">
+            <User className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
           </Link>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
-          Log out
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

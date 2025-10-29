@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { PrintableVoucher } from "@/components/printable-voucher";
 import { Voucher } from "@/components/voucher-list";
@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 
 export default function PrintVoucherPage() {
   const params = useParams();
-  const router = useRouter();
-  const { supabase, session, loading: authLoading, refreshProfile } = useSupabaseAuth();
+  const { supabase, session, loading: authLoading } = useSupabaseAuth();
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,17 +55,15 @@ export default function PrintVoucherPage() {
     fetchVoucher();
   }, [params.id, session, supabase, authLoading]);
 
-  // 2. Handle Print and Post-Print Cleanup/Redirection
+  // 2. Handle Print and Post-Print Cleanup
   useEffect(() => {
     if (voucher && !loading && !error && !printInitiated) {
       setPrintInitiated(true);
 
-      const handleAfterPrint = async () => {
-        // CRITICAL FIX: Force a session refresh after the print dialog closes
-        await refreshProfile();
-        
-        // Force navigation back to the dashboard to ensure a clean state transition
-        router.replace("/dashboard");
+      const handleAfterPrint = () => {
+        // The main window will refresh its data on focus.
+        // We can just close this tab.
+        window.close();
       };
 
       // Attach the listener
@@ -82,7 +79,7 @@ export default function PrintVoucherPage() {
         window.removeEventListener("afterprint", handleAfterPrint);
       };
     }
-  }, [voucher, loading, error, printInitiated, refreshProfile, router]);
+  }, [voucher, loading, error, printInitiated]);
 
   if (loading || authLoading) {
     return (
@@ -103,8 +100,6 @@ export default function PrintVoucherPage() {
     );
   }
 
-  // If the print dialog is open, we don't want the user to manually navigate away
-  // until the print process is complete, but we still show the content.
   return (
     <>
       <div className="print:hidden fixed top-4 right-4 z-50">

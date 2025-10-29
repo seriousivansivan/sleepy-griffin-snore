@@ -50,6 +50,11 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
+  const refreshProfile = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    await fetchProfile(currentSession);
+  };
+
   useEffect(() => {
     setLoading(true);
 
@@ -66,15 +71,18 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       }
     });
 
+    // Add a listener to refetch data when the window gains focus.
+    // This ensures data is fresh when switching back to the tab.
+    const handleFocus = () => {
+      refreshProfile();
+    };
+    window.addEventListener("focus", handleFocus);
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
-
-  const refreshProfile = async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    await fetchProfile(currentSession);
-  };
 
   const value = {
     supabase,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { PrintableVoucher } from "@/components/printable-voucher";
 import { Voucher } from "@/components/voucher-list";
@@ -9,19 +9,18 @@ import { Button } from "@/components/ui/button";
 
 export default function PrintVoucherPage() {
   const params = useParams();
-  const { supabase, session, loading: authLoading } = useSupabaseAuth(); // Use the loading state from the auth provider
+  const router = useRouter();
+  const { supabase, session, loading: authLoading, refreshProfile } = useSupabaseAuth();
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [printInitiated, setPrintInitiated] = useState(false);
 
+  // 1. Fetch Voucher Data
   useEffect(() => {
     const fetchVoucher = async () => {
-      // Wait until the auth provider is done loading
-      if (authLoading) {
-        return;
-      }
+      if (authLoading) return;
 
-      // If auth is done and there's no session, show an error
       if (!session) {
         setError("You must be logged in to view this voucher.");
         setLoading(false);
@@ -55,18 +54,37 @@ export default function PrintVoucherPage() {
     };
 
     fetchVoucher();
-  }, [params.id, session, supabase, authLoading]); // Add authLoading to the dependency array
+  }, [params.id, session, supabase, authLoading]);
 
+  // 2. Handle Print and Post-Print Cleanup/Redirection
   useEffect(() => {
-    if (voucher && !loading && !error) {
+    if (voucher && !loading && !error && !printInitiated) {
+      setPrintInitiated(true);
+
+      const handleAfterPrint = async () => {
+        // CRITICAL FIX: Force a session refresh after the print dialog closes
+        await refreshProfile();
+        
+        // Force navigation back to the dashboard to ensure a clean state transition
+        router.replace("/dashboard");
+      };
+
+      // Attach the listener
+      window.addEventListener("afterprint", handleAfterPrint);
+
       const timer = setTimeout(() => {
         window.print();
       }, 500); // Delay to allow content to render
-      return () => clearTimeout(timer);
-    }
-  }, [voucher, loading, error]);
 
-  if (loading || authLoading) { // Show loading indicator while auth is pending
+      // Cleanup: remove listener and clear timeout
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("afterprint", handleAfterPrint);
+      };
+    }
+  }, [voucher, loading, error, printInitiated, refreshProfile, router]);
+
+  if (loading || authLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-muted">
         <p>Loading voucher for printing...</p>
@@ -85,6 +103,8 @@ export default function PrintVoucherPage() {
     );
   }
 
+  // If the print dialog is open, we don't want the user to manually navigate away
+  // until the print process is complete, but we still show the content.
   return (
     <>
       <div className="print:hidden fixed top-4 right-4 z-50">

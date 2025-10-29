@@ -127,7 +127,7 @@ export function CreateVoucherDialog({
     if (
       profile &&
       !profile.has_unlimited_credit &&
-      profile.credit < calculatedTotalAmount
+      (profile.credit ?? 0) < calculatedTotalAmount // FIX: Safely access profile.credit
     ) {
       toast.error("Insufficient credit to create this voucher.");
       setIsSubmitting(false);

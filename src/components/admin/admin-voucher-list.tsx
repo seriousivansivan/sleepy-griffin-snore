@@ -24,6 +24,7 @@ type UserProfile = {
 type Company = {
   id: string;
   name: string;
+  logo_url: string | null;
 };
 
 type RawVoucher = Omit<Voucher, "companies" | "user"> & {
@@ -53,7 +54,7 @@ export function AdminVoucherList() {
     try {
       const [usersRes, companiesRes, vouchersRes] = await Promise.all([
         supabase.from("profiles").select("id, user_name").order("user_name"),
-        supabase.from("companies").select("id, name").order("name"),
+        supabase.from("companies").select("id, name, logo_url").order("name"),
         supabase.rpc("get_all_vouchers_for_admin"),
       ]);
 

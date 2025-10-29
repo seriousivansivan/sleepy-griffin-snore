@@ -25,7 +25,7 @@ export default function AdminVouchersPage() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-8">
         Voucher Management
       </h1>
       <AdminVoucherList />

@@ -65,7 +65,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
       role: user.role as "user" | "admin",
       monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
       has_unlimited_credit: user.has_unlimited_credit ?? false,
-      companyIds: user.user_companies.map((uc) => uc.company_id),
+      companyIds: user.user_companies?.map((uc) => uc.company_id) ?? [],
     },
   });
 

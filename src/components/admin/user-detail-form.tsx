@@ -30,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUserEmail } from "@/hooks/use-user-email"; // Import the new hook
+import { useUserEmail } from "@/hooks/use-user-email";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
@@ -53,7 +53,7 @@ type UserDetailFormProps = {
 
 export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
-  const { email, isLoading: isEmailLoading } = useUserEmail(user.id); // Use the new hook
+  const { email, isLoading: isEmailLoading } = useUserEmail(user.id);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,14 +72,12 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
   const hasUnlimitedCredit = form.watch("has_unlimited_credit");
   const watchedCompanyIds = form.watch("companyIds");
 
-  // Derived state for "Select All" checkbox
   const isAllSelected =
     allCompanies.length > 0 && watchedCompanyIds.length === allCompanies.length;
   const isIndeterminate =
     watchedCompanyIds.length > 0 &&
     watchedCompanyIds.length < allCompanies.length;
 
-  // Effect to fetch all companies
   useEffect(() => {
     const fetchAllCompanies = async () => {
       setIsCompaniesLoading(true);
@@ -99,7 +97,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
     fetchAllCompanies();
   }, [supabase]);
 
-  // Handler for Select All/Deselect All
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       form.setValue(
@@ -116,7 +113,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
     setIsSubmitting(true);
 
     try {
-      // --- 1. Update Profile (Role and Credit) ---
       const updateData: Partial<Profile> = {
         role: values.role,
         has_unlimited_credit: values.has_unlimited_credit,
@@ -127,7 +123,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
         updateData.credit = 0;
       } else {
         updateData.monthly_credit_allowance = values.monthly_credit_allowance;
-        // Only reset credit if it's currently unlimited or if the allowance increased
         if (
           user.has_unlimited_credit ||
           values.monthly_credit_allowance > (user.monthly_credit_allowance ?? 0)
@@ -143,7 +138,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
 
       if (profileError) throw profileError;
 
-      // --- 2. Update User Company Associations ---
       const currentCompanyIds = user.user_companies.map((uc) => uc.company_id);
       const desiredCompanyIds = values.companyIds;
 
@@ -154,7 +148,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
         (id) => !desiredCompanyIds.includes(id)
       );
 
-      // Insert new links
       if (companiesToAdd.length > 0) {
         const inserts = companiesToAdd.map((company_id) => ({
           user_id: user.id,
@@ -166,7 +159,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
         if (insertError) throw insertError;
       }
 
-      // Delete removed links
       if (companiesToRemove.length > 0) {
         const { error: deleteError } = await supabase
           .from("user_companies")
@@ -195,7 +187,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
           <CardTitle className="text-xl">User Details & Settings</CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          {/* Static User Info */}
           <div className="space-y-3 text-sm border-b pb-6">
             <div className="flex">
               <span className="font-semibold mr-1">Username:</span>{" "}
@@ -228,7 +219,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Role Field */}
               <FormField
                 control={form.control}
                 name="role"
@@ -255,7 +245,6 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                 )}
               />
 
-              {/* Credit Fields */}
               <div className="space-y-4 border p-4 rounded-md bg-muted">
                 <h3 className="font-semibold">Credit Management</h3>
                 <FormField
@@ -265,7 +254,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                       <FormControl>
                         <Checkbox
-                          checked={field.value}
+                          checked={!!field.value}
                           onCheckedChange={field.onChange}
                           disabled={isSubmitting}
                         />
@@ -311,14 +300,12 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                 </p>
               </div>
 
-              {/* Company Association Management */}
               <FormField
                 control={form.control}
                 name="companyIds"
                 render={() => (
                   <FormItem>
                     <FormLabel>Company Associations</FormLabel>
-                    {/* Select All Checkbox */}
                     <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
                       <Checkbox
                         checked={isAllSelected}
@@ -356,17 +343,19 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                                 >
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value?.includes(
-                                        company.id
-                                      )}
+                                      checked={
+                                        field.value?.includes(company.id) ??
+                                        false
+                                      }
                                       onCheckedChange={(checked) => {
+                                        const currentValue = field.value || [];
                                         return checked
                                           ? field.onChange([
-                                              ...field.value,
+                                              ...currentValue,
                                               company.id,
                                             ])
                                           : field.onChange(
-                                              field.value?.filter(
+                                              currentValue.filter(
                                                 (value) =>
                                                   value !== company.id
                                               )

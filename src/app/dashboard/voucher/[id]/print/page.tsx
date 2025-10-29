@@ -68,7 +68,7 @@ export default function PrintVoucherPage() {
 
   if (loading || authLoading) { // Show loading indicator while auth is pending
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="flex justify-center items-center min-h-screen bg-muted">
         <p>Loading voucher for printing...</p>
       </div>
     );
@@ -76,8 +76,8 @@ export default function PrintVoucherPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <div className="text-center p-8 bg-white rounded-lg shadow-md">
+      <div className="flex justify-center items-center min-h-screen bg-muted">
+        <div className="text-center p-8 bg-card rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-destructive mb-4">Error</h2>
           <p>{error}</p>
         </div>
@@ -90,7 +90,7 @@ export default function PrintVoucherPage() {
       <div className="print:hidden fixed top-4 right-4 z-50">
         <Button onClick={() => window.print()}>Print Again</Button>
       </div>
-      <main className="flex justify-center items-start min-h-screen bg-gray-200 p-4 print:bg-white print:p-0">
+      <main className="flex justify-center items-start min-h-screen bg-muted p-4 print:bg-white print:p-0">
         {voucher && <PrintableVoucher voucher={voucher} />}
       </main>
     </>

@@ -26,7 +26,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-muted">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
         <div className="flex items-center mb-6">
           <Button variant="ghost" onClick={() => router.back()} className="mr-4">

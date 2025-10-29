@@ -244,7 +244,7 @@ export function UserProfileView() {
                     {profile.role}
                   </Badge>
                 </div>
-                <div className="space-y-4 border p-4 rounded-md bg-gray-50/80">
+                <div className="space-y-4 border p-4 rounded-md bg-muted">
                   <h3 className="font-semibold">Credit Information</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">

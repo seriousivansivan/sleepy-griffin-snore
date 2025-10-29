@@ -203,7 +203,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
             </div>
             <div className="flex">
               <span className="font-semibold mr-1">Email:</span>{" "}
-              <span className="text-gray-700">
+              <span className="text-muted-foreground">
                 {isEmailLoading ? (
                   <Skeleton className="h-4 w-48 inline-block" />
                 ) : (
@@ -256,7 +256,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
               />
 
               {/* Credit Fields */}
-              <div className="space-y-4 border p-4 rounded-md bg-gray-50">
+              <div className="space-y-4 border p-4 rounded-md bg-muted">
                 <h3 className="font-semibold">Credit Management</h3>
                 <FormField
                   control={form.control}

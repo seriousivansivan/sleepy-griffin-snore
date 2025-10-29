@@ -97,7 +97,7 @@ export default function DashboardPage() {
               <span className="font-semibold text-foreground">
                 {profile.has_unlimited_credit
                   ? "Unlimited"
-                  : profile.credit.toLocaleString(undefined, {
+                  : (profile.credit ?? 0).toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}

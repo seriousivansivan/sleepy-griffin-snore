@@ -9,9 +9,9 @@ export type Profile = {
   id: string;
   user_name: string | null;
   role: string;
-  monthly_credit_allowance: number;
-  credit: number;
-  has_unlimited_credit: boolean;
+  monthly_credit_allowance: number | null;
+  credit: number | null;
+  has_unlimited_credit: boolean | null;
   updated_at: string;
   user_companies: { company_id: string }[];
 };

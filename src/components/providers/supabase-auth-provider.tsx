@@ -51,35 +51,33 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    // This function can still be called manually, but it won't trigger the global loading state.
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
   }, [fetchProfile]);
 
   useEffect(() => {
-    // Set loading to true initially
-    setLoading(true);
+    const initializeSession = async () => {
+      // 1. Proactively fetch the session from storage on initial load
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      await fetchProfile(initialSession);
+      setLoading(false); // Initial load is complete
 
-    // Listen for authentication state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Update session and profile for all events
-      setSession(session);
-      await fetchProfile(session);
+      // 2. Then, set up a listener for any future auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        setSession(session);
+        await fetchProfile(session);
+      });
 
-      // The 'INITIAL_SESSION' event is crucial. It fires once when the client
-      // is initialized, and it confirms that the session has been restored.
-      // We stop the loading state only after this event has been handled.
-      if (event === "INITIAL_SESSION") {
-        setLoading(false);
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe();
+      // Cleanup subscription on unmount
+      return () => {
+        subscription.unsubscribe();
+      };
     };
+
+    initializeSession();
   }, [fetchProfile]);
 
   const value = {

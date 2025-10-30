@@ -33,21 +33,18 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const fetchProfile = useCallback(async (currentSession: Session | null) => {
     if (currentSession) {
-      // Removed .single() to handle potential multiple rows gracefully
       const { data, error } = await supabase
         .from("profiles")
         .select("*, user_companies(company_id)")
         .eq("id", currentSession.user.id)
-        .limit(1); // Limit to 1 row
+        .limit(1);
 
       if (error) {
         console.error("Error fetching profile:", error.message);
         setProfile(null);
       } else if (data && data.length > 0) {
-        // Use the first profile found
         setProfile(data[0] as Profile);
       } else {
-        // No profile found
         setProfile(null);
       }
     } else {
@@ -60,17 +57,30 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     await fetchProfile(currentSession);
   }, [fetchProfile]);
 
+  // 1. Initial Load Effect: Fetch session and profile immediately on mount
   useEffect(() => {
+    const loadInitialData = async () => {
+      // 1. Get session immediately
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+
+      // 2. Fetch profile based on that session
+      await fetchProfile(initialSession);
+
+      // 3. Mark loading complete only after both are done
+      setLoading(false);
+    };
+
+    loadInitialData();
+
+    // 2. Listener Effect: Set up listener for real-time changes (sign in/out)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      await fetchProfile(session);
-
-      // The 'INITIAL_SESSION' event is fired only once when the client initializes.
-      // This is the perfect moment to know that the initial auth check is complete.
-      if (event === 'INITIAL_SESSION') {
-        setLoading(false);
+      // Only handle changes, not the initial load (which we handled above)
+      if (event !== 'INITIAL_SESSION') {
+        setSession(session);
+        await fetchProfile(session);
       }
     });
 
@@ -78,7 +88,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile]); // fetchProfile is the only dependency
 
   const value = {
     supabase,

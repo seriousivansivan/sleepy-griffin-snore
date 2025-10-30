@@ -1,10 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-// --- 1. MAKE SURE 'Session' IS IMPORTED ---
 import { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation"; // Add this import
 
 export type Profile = {
   id: string;
@@ -28,22 +27,12 @@ type SupabaseContextType = {
 
 const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
-// --- 2. ACCEPT THE 'session' PROP ---
-export const SupabaseAuthProvider = ({
-  children,
-  session: serverSession, // Give the prop a new name to avoid state conflicts
-}: {
-  children: React.ReactNode;
-  session: Session | null; // This is the prop from layout.tsx
-}) => {
-  
-  // --- 3. USE THE PROP AS THE INITIAL STATE ---
-  const [session, setSession] = useState<Session | null>(serverSession);
-  const [user, setUser] = useState<User | null>(serverSession?.user ?? null);
-
+export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true); // This is still correct
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const router = useRouter(); // Add this
 
   const fetchProfile = async (currentSession: Session | null) => {
     if (currentSession) {
@@ -65,22 +54,11 @@ export const SupabaseAuthProvider = ({
   };
 
   useEffect(() => {
-    // This function will now run with the serverSession already set
     const initializeAuth = async () => {
       try {
-        // getSession() will be fast because the cookie is already there.
-        // It will just confirm the serverSession.
-        const {
-          data: { session: existingSession },
-        } = await supabase.auth.getSession();
-        
-        // If the session has changed (e.g., user logged out in another tab),
-        // this will update the state.
-        if (existingSession?.access_token !== session?.access_token) {
-           setSession(existingSession);
-           setUser(existingSession?.user ?? null);
-        }
-
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
         await fetchProfile(existingSession);
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -95,17 +73,14 @@ export const SupabaseAuthProvider = ({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log("Auth event:", event);
-
+      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       await fetchProfile(currentSession);
       setLoading(false);
 
-      if (
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "TOKEN_REFRESHED"
-      ) {
+      // Refresh the router cache when auth state changes
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         router.refresh();
       }
     });
@@ -113,13 +88,11 @@ export const SupabaseAuthProvider = ({
     const handleVisibilityChange = async () => {
       if (!document.hidden) {
         console.log("Tab visible - refreshing session");
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
         if (currentSession) {
           await supabase.auth.refreshSession();
-          router.refresh();
+          router.refresh(); // Refresh router when tab becomes visible
         }
       }
     };
@@ -130,14 +103,12 @@ export const SupabaseAuthProvider = ({
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [router, session]); // Add 'session' to dependency array
+  }, [router]);
 
   const refreshProfile = async () => {
-    const {
-      data: { session: currentSession },
-    } = await supabase.auth.getSession();
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
-    router.refresh();
+    router.refresh(); // Add router refresh here too
   };
 
   const value = {

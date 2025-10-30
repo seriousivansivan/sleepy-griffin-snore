@@ -1,17 +1,15 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import DashboardClient from './dashboard-client'; // We will create this next
-import type { Voucher } from '@/components/voucher-list'; // Adjust path if needed
-import type { Profile } from '@/types'; // You might need to create this type based on your profile structure
+import DashboardClient from './dashboard-client';
+import type { Voucher } from '@/components/voucher-list';
+import type { Profile } from '@/components/providers/supabase-auth-provider'; // Corrected import path for Profile type
 
 // Helper function to get the profile.
-// You likely have this logic in your SupabaseAuthProvider,
-// so you can move it here.
 async function getProfile(supabase: any, userId: string) {
-  const { data: profile, error }_ =_ await supabase
+  const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*') // Be more specific here if you can, e.g., 'user_name, credit, ...'
+    .select('*, user_companies(company_id)') // Select user_companies as well
     .eq('id', userId)
     .single();
 
@@ -19,7 +17,7 @@ async function getProfile(supabase: any, userId: string) {
     console.error('Error fetching profile:', error);
     return null;
   }
-  return profile as Profile; // Cast to your Profile type
+  return profile as Profile;
 }
 
 export default async function DashboardPage() {
@@ -38,7 +36,7 @@ export default async function DashboardPage() {
   const profile = await getProfile(supabase, session.user.id);
 
   // 4. Handle profile completion
-  if (!profile || !profile.user_name || profile.user_companies?.length === 0) {
+  if (!profile || !profile.user_name || profile.user_companies.length === 0) {
     redirect('/complete-profile');
   }
 
@@ -50,6 +48,7 @@ export default async function DashboardPage() {
       companies(*),
       user:profiles!user_id(id, user_name)
     `)
+    .eq('user_id', session.user.id) // Filter vouchers by the current user
     .order('created_at', { ascending: false });
 
   if (error) {

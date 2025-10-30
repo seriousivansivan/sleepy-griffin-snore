@@ -1,41 +1,35 @@
 "use client";
 
-// All your original imports
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useMemo } from "react"; // Removed useEffect
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import Link from "next/link";
 import { Shield } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { Profile } from '@/types'; // Assumes you have a Profile type
 
 const VOUCHERS_PER_PAGE = 10;
 
-// This component receives the data fetched by the Server Component
-interface DashboardClientProps {
-  profile: Profile; // Use your actual Profile type
-  initialVouchers: Voucher[];
-}
-
-export default function DashboardClient({ profile, initialVouchers }: DashboardClientProps) {
-  // The server already handled redirects and loading.
-  // We just get the 'supabase' client for *actions* (like creating a voucher).
-  const { supabase } = useSupabaseAuth();
-  
-  // The state is initialized with the server-fetched props
-  const [vouchers, setVouchers] = useState<Voucher[]>(initialVouchers);
-  const [vouchersLoading, setVouchersLoading] = useState(false); // Starts false
+export default function DashboardPage() {
+  const { session, supabase, loading, profile } = useSupabaseAuth();
+  const router = useRouter();
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [vouchersLoading, setVouchersLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  
-  // Note: All the useEffects for redirection and initial fetching are GONE.
-  // The server handled it!
 
-  // This function is still useful for *refreshing* the list
-  // (e.g., after creating a new voucher)
+  useEffect(() => {
+    if (!loading) {
+      if (!session) {
+        router.replace("/login");
+      } else if (!profile?.user_name || profile.user_companies.length === 0) {
+        router.replace("/complete-profile");
+      }
+    }
+  }, [session, loading, router, profile]);
+
   const fetchVouchers = useCallback(async () => {
     setVouchersLoading(true);
     try {
@@ -48,7 +42,9 @@ export default function DashboardClient({ profile, initialVouchers }: DashboardC
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       setVouchers(data as Voucher[] || []);
       setCurrentPage(1);
     } catch (error) {
@@ -57,6 +53,12 @@ export default function DashboardClient({ profile, initialVouchers }: DashboardC
       setVouchersLoading(false);
     }
   }, [supabase]);
+
+  useEffect(() => {
+    if (!loading && profile) {
+      fetchVouchers();
+    }
+  }, [loading, profile, fetchVouchers]);
 
   const totalPages = useMemo(() => {
     return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
@@ -68,9 +70,18 @@ export default function DashboardClient({ profile, initialVouchers }: DashboardC
     }
   };
 
-  // The main loading state is no longer needed.
-  // The server guarantees we have a session and profile here.
-  // if (loading || !session ...) { ... } <-- REMOVE THIS
+  if (
+    loading ||
+    !session ||
+    !profile?.user_name ||
+    profile.user_companies.length === 0
+  ) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted">
@@ -79,7 +90,6 @@ export default function DashboardClient({ profile, initialVouchers }: DashboardC
           <div>
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              {/* Use the profile from props */}
               Welcome back, {profile.user_name}.
             </p>
             <p className="text-sm text-muted-foreground mt-2">
@@ -103,10 +113,9 @@ export default function DashboardClient({ profile, initialVouchers }: DashboardC
                 </Link>
               </Button>
             )}
-            {/* Pass the refresh function to the dialog */}
             <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
             <ThemeToggle />
-            <UserNav /> {/* UserNav will still use useSupabaseAuth to show user info */}
+            <UserNav />
           </div>
         </header>
 
@@ -124,3 +133,4 @@ export default function DashboardClient({ profile, initialVouchers }: DashboardC
     </div>
   );
 }
+

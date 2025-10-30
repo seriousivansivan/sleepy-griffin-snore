@@ -10,7 +10,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile, loading } = useSupabaseAuth();
+  const { profile, loading, refreshProfile } = useSupabaseAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,6 +20,20 @@ export default function AdminLayout({
       }
     }
   }, [profile, loading, router]);
+
+  // This effect will re-fetch the user's profile when the tab becomes visible again,
+  // ensuring the auth state is correctly synchronized and preventing the loading screen from getting stuck.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshProfile();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshProfile]);
 
   if (loading || !profile || profile.role !== "admin") {
     return (

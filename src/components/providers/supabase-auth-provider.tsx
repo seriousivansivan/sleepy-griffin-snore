@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { Session, SupabaseClient } from "@supabase/supabase-js";
+import { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 // Define a type for our profile data
@@ -20,6 +20,7 @@ type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
   profile: Profile | null;
+  user: User | null; // Added user to context
   loading: boolean;
   refreshProfile: () => Promise<void>;
 };
@@ -28,6 +29,7 @@ const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null); // Separate user state
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,16 +53,17 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
+    // Set loading to true initially
     setLoading(true);
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      await fetchProfile(session);
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null); // Update user state
+      await fetchProfile(currentSession);
 
-      // The INITIAL_SESSION event is fired only once when the client is initialized.
-      // This is the perfect moment to stop the loading state.
+      // Only set loading to false once the initial session is established
       if (event === "INITIAL_SESSION") {
         setLoading(false);
       }
@@ -80,6 +83,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     supabase,
     session,
     profile,
+    user, // Include user in the context value
     loading,
     refreshProfile,
   };

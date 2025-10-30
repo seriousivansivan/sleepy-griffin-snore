@@ -56,26 +56,26 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    setLoading(true);
-    // This flag ensures we only set loading to false on the very first auth event.
-    let initialLoadHandled = false;
+    // 1. Initialize session immediately on mount
+    const initializeSession = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
+      await fetchProfile(currentSession);
+      setLoading(false); // Guaranteed to run once after initial check
+    };
 
+    initializeSession();
+
+    // 2. Listen for subsequent auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       await fetchProfile(session);
-
-      // Once the first auth event fires (whether it's INITIAL_SESSION or SIGNED_IN
-      // from a restored session), we can consider the initial auth check complete.
-      if (!initialLoadHandled) {
-        setLoading(false);
-        initialLoadHandled = true;
-      }
+      // No need to manage loading state here, as initial load is handled above
     });
 
-    // Add a listener to refetch data when the window gains focus.
-    // This ensures data is fresh when switching back to the tab.
+    // 3. Add a listener to refetch data when the window gains focus
     const handleFocus = () => {
       refreshProfile();
     };

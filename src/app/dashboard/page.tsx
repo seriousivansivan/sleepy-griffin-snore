@@ -60,6 +60,20 @@ export default function DashboardPage() {
     }
   }, [loading, profile, fetchVouchers]);
 
+  // This effect will re-fetch data when the user returns to this tab
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!loading && profile) {
+        fetchVouchers();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [loading, profile, fetchVouchers]);
+
+
   const totalPages = useMemo(() => {
     return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
   }, [vouchers.length]);

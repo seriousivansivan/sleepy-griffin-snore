@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { AdminSidebar } from "@/components/admin/sidebar";
@@ -12,25 +12,24 @@ export default function AdminLayout({
 }) {
   const { profile, loading } = useSupabaseAuth();
   const router = useRouter();
-  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    // This effect handles the logic for verification and redirection.
+    // This effect is now ONLY for the side-effect of redirection.
+    // It does not manage any local state.
     if (!loading) {
-      if (profile && profile.role === "admin") {
-        // Once we confirm the user is an admin, we set verification to true.
-        // This will prevent the loading screen from showing up on subsequent re-renders (e.g., tab focus).
-        setIsVerified(true);
-      } else {
-        // If the user is not loading and is not an admin (or has no profile),
-        // redirect them away from the admin section.
+      if (!profile || profile.role !== "admin") {
+        // If the initial load is finished and the user is not an admin,
+        // redirect them away.
         router.replace("/dashboard");
       }
     }
   }, [profile, loading, router]);
 
-  // The loading screen is now only shown if the initial verification has not yet passed.
-  if (!isVerified) {
+  // The rendering logic is now stateless and directly tied to the auth context.
+  // We show a loading screen if:
+  // 1. The initial auth check is still running (`loading` is true).
+  // 2. The user is not an admin (the useEffect above will then redirect them).
+  if (loading || !profile || profile.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p>Loading & Verifying Access...</p>
@@ -38,9 +37,8 @@ export default function AdminLayout({
     );
   }
 
-  // Once verified, we render the actual admin layout.
-  // The useEffect above will continue to run in the background and handle any
-  // potential loss of session or change in role, ensuring security.
+  // If we reach this point, it means `loading` is false AND we have a
+  // profile that is confirmed to be an admin. We can safely render the layout.
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />

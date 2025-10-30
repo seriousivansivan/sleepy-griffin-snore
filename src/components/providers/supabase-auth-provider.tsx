@@ -20,7 +20,7 @@ type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
   profile: Profile | null;
-  user: User | null; // Added user to context
+  user: User | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
 };
@@ -29,7 +29,7 @@ const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null); // Separate user state
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,24 +53,54 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    // Set loading to true initially
-    setLoading(true);
+    // Initialize session on mount
+    const initializeAuth = async () => {
+      try {
+        // Get existing session
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
+        await fetchProfile(existingSession);
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    initializeAuth();
+
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log("Auth event:", event); // Debug log
       setSession(currentSession);
-      setUser(currentSession?.user ?? null); // Update user state
+      setUser(currentSession?.user ?? null);
       await fetchProfile(currentSession);
-
-      // Only set loading to false once the initial session is established
-      if (event === "INITIAL_SESSION") {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
+    // Handle tab visibility changes
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        // Tab became visible - refresh session
+        console.log("Tab visible - refreshing session");
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession) {
+          // Refresh the session to ensure it's valid
+          await supabase.auth.refreshSession();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Cleanup
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -83,7 +113,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     supabase,
     session,
     profile,
-    user, // Include user in the context value
+    user,
     loading,
     refreshProfile,
   };

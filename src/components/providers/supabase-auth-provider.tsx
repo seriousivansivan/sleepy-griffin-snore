@@ -3,8 +3,18 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation";
-import { Profile } from "@/types"; // Import Profile from the new types file
+import { useRouter } from "next/navigation"; // Add this import
+
+export type Profile = {
+  id: string;
+  user_name: string | null;
+  role: string;
+  monthly_credit_allowance: number | null;
+  credit: number | null;
+  has_unlimited_credit: boolean | null;
+  updated_at: string;
+  user_companies: { company_id: string }[];
+};
 
 type SupabaseContextType = {
   supabase: SupabaseClient;
@@ -22,7 +32,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const router = useRouter(); // Add this
 
   const fetchProfile = async (currentSession: Session | null) => {
     if (currentSession) {
@@ -69,6 +79,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       await fetchProfile(currentSession);
       setLoading(false);
 
+      // Refresh the router cache when auth state changes
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         router.refresh();
       }
@@ -81,7 +92,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
         
         if (currentSession) {
           await supabase.auth.refreshSession();
-          router.refresh();
+          router.refresh(); // Refresh router when tab becomes visible
         }
       }
     };
@@ -97,7 +108,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   const refreshProfile = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
-    router.refresh();
+    router.refresh(); // Add router refresh here too
   };
 
   const value = {

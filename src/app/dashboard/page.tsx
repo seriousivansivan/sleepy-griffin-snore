@@ -1,8 +1,9 @@
+"use client";
 export const dynamic = 'force-dynamic';
 
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 // ... rest of your imports
-//"use client";
+
 
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";

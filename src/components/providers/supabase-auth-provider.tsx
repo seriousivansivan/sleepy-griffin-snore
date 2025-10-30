@@ -72,18 +72,10 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       await fetchProfile(session);
-      // No need to manage loading state here, as initial load is handled above
     });
-
-    // 3. Add a listener to refetch data when the window gains focus
-    const handleFocus = () => {
-      refreshProfile();
-    };
-    window.addEventListener("focus", handleFocus);
 
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

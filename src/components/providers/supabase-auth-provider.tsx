@@ -33,17 +33,22 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const fetchProfile = useCallback(async (currentSession: Session | null) => {
     if (currentSession) {
+      // Removed .single() to handle potential multiple rows gracefully
       const { data, error } = await supabase
         .from("profiles")
         .select("*, user_companies(company_id)")
         .eq("id", currentSession.user.id)
-        .single();
+        .limit(1); // Limit to 1 row
 
       if (error) {
         console.error("Error fetching profile:", error.message);
         setProfile(null);
+      } else if (data && data.length > 0) {
+        // Use the first profile found
+        setProfile(data[0] as Profile);
       } else {
-        setProfile(data as Profile);
+        // No profile found
+        setProfile(null);
       }
     } else {
       setProfile(null);

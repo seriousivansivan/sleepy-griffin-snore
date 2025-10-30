@@ -1,5 +1,5 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { cookies as nextCookies } from 'next/headers'; // Rename import to avoid conflict
 import { redirect } from 'next/navigation';
 import DashboardClient from './dashboard-client';
 import type { Voucher } from '@/components/voucher-list';
@@ -7,7 +7,7 @@ import type { Profile } from '@/components/providers/supabase-auth-provider';
 
 // Helper function to get the profile.
 async function getProfile(supabase: any, userId: string) {
-  const { data: profile, error } = await supabase // Corrected this line
+  const { data: profile, error } = await supabase
     .from('profiles')
     .select('*, user_companies(company_id)')
     .eq('id', userId)
@@ -21,8 +21,8 @@ async function getProfile(supabase: any, userId: string) {
 }
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  // Explicitly wrap nextCookies() in a function to satisfy Next.js 15's dynamic API usage warning.
+  const supabase = createServerComponentClient({ cookies: () => nextCookies() });
 
   // 1. Get the session
   const { data: { session } } = await supabase.auth.getSession();

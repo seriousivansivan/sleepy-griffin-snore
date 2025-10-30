@@ -7,6 +7,8 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res });
 
   // Refresh the session if it's expired and set the response cookie
+  // This call is crucial for the middleware to update the session cookies
+  // on the response, which are then read by server components.
   await supabase.auth.getSession();
 
   return res;

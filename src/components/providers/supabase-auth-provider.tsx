@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Session, SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,7 +20,7 @@ type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
   profile: Profile | null;
-  loading: boolean;
+  loading: boolean; // This now only represents the initial load
   refreshProfile: () => Promise<void>;
 };
 
@@ -29,9 +29,9 @@ const SupabaseContext = createContext<SupabaseContextType | null>(null);
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // True only on initial mount
 
-  const fetchProfile = async (currentSession: Session | null) => {
+  const fetchProfile = useCallback(async (currentSession: Session | null) => {
     if (currentSession) {
       const { data, error } = await supabase
         .from("profiles")
@@ -48,40 +48,39 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     } else {
       setProfile(null);
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
-    setLoading(true);
+  const refreshProfile = useCallback(async () => {
+    // This function can still be called manually, but it won't trigger the global loading state.
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
-    setLoading(false);
-  };
+  }, [fetchProfile]);
 
   useEffect(() => {
+    // 1. Get the initial session and profile
     const initializeSession = async () => {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
       await fetchProfile(currentSession);
-      setLoading(false);
+      setLoading(false); // Set loading to false only after the initial check is complete
     };
 
     initializeSession();
 
+    // 2. Set up a listener for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Set loading to true whenever an auth event occurs
-      setLoading(true);
+      // On subsequent auth changes, just update the session and profile
+      // without touching the main `loading` state.
       setSession(session);
       await fetchProfile(session);
-      // Set loading to false after the session and profile have been updated
-      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const value = {
     supabase,

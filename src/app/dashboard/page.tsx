@@ -2,6 +2,7 @@
 
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
@@ -13,17 +14,23 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const VOUCHERS_PER_PAGE = 10;
 
 export default function DashboardPage() {
-  const { supabase, loading, profile } = useSupabaseAuth();
+  const { session, supabase, loading, profile } = useSupabaseAuth();
+  const router = useRouter();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [vouchersLoading, setVouchersLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Note: Auth/Redirect logic is now handled by dashboard/layout.tsx
+  useEffect(() => {
+    if (!loading) {
+      if (!session) {
+        router.replace("/login");
+      } else if (!profile?.user_name || profile.user_companies.length === 0) {
+        router.replace("/complete-profile");
+      }
+    }
+  }, [session, loading, router, profile]);
 
   const fetchVouchers = useCallback(async () => {
-    // Only fetch if profile is available (which is guaranteed by the layout check)
-    if (!profile) return; 
-    
     setVouchersLoading(true);
     try {
       const { data, error } = await supabase
@@ -45,28 +52,13 @@ export default function DashboardPage() {
     } finally {
       setVouchersLoading(false);
     }
-  }, [supabase, profile]);
+  }, [supabase]);
 
   useEffect(() => {
-    // Fetch data only when profile is loaded and available
     if (!loading && profile) {
       fetchVouchers();
     }
   }, [loading, profile, fetchVouchers]);
-
-  // This effect will re-fetch data when the tab becomes visible again
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !loading && profile) {
-        fetchVouchers();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [loading, profile, fetchVouchers]);
-
 
   const totalPages = useMemo(() => {
     return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
@@ -78,9 +70,18 @@ export default function DashboardPage() {
     }
   };
 
-  // The layout handles the loading/unauthenticated state. 
-  // If we reach here, profile is guaranteed to exist and be complete.
-  if (!profile) return null; 
+  if (
+    loading ||
+    !session ||
+    !profile?.user_name ||
+    profile.user_companies.length === 0
+  ) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted">

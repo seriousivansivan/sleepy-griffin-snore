@@ -9,17 +9,19 @@ import { Button } from "@/components/ui/button";
 
 export default function PrintVoucherPage() {
   const params = useParams();
-  const { supabase, session, loading: authLoading } = useSupabaseAuth();
+  const { supabase, session, loading: authLoading } = useSupabaseAuth(); // Use the loading state from the auth provider
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [printInitiated, setPrintInitiated] = useState(false);
 
-  // 1. Fetch Voucher Data
   useEffect(() => {
     const fetchVoucher = async () => {
-      if (authLoading) return;
+      // Wait until the auth provider is done loading
+      if (authLoading) {
+        return;
+      }
 
+      // If auth is done and there's no session, show an error
       if (!session) {
         setError("You must be logged in to view this voucher.");
         setLoading(false);
@@ -53,35 +55,18 @@ export default function PrintVoucherPage() {
     };
 
     fetchVoucher();
-  }, [params.id, session, supabase, authLoading]);
+  }, [params.id, session, supabase, authLoading]); // Add authLoading to the dependency array
 
-  // 2. Handle Print and Post-Print Cleanup
   useEffect(() => {
-    if (voucher && !loading && !error && !printInitiated) {
-      setPrintInitiated(true);
-
-      const handleAfterPrint = () => {
-        // The main window will refresh its data on focus.
-        // We can just close this tab.
-        window.close();
-      };
-
-      // Attach the listener
-      window.addEventListener("afterprint", handleAfterPrint);
-
+    if (voucher && !loading && !error) {
       const timer = setTimeout(() => {
         window.print();
       }, 500); // Delay to allow content to render
-
-      // Cleanup: remove listener and clear timeout
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener("afterprint", handleAfterPrint);
-      };
+      return () => clearTimeout(timer);
     }
-  }, [voucher, loading, error, printInitiated]);
+  }, [voucher, loading, error]);
 
-  if (loading || authLoading) {
+  if (loading || authLoading) { // Show loading indicator while auth is pending
     return (
       <div className="flex justify-center items-center min-h-screen bg-muted">
         <p>Loading voucher for printing...</p>

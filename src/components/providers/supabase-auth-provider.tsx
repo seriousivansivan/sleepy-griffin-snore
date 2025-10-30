@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Session, SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,7 +20,7 @@ type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
   profile: Profile | null;
-  loading: boolean; // This now only represents the initial load
+  loading: boolean;
   refreshProfile: () => Promise<void>;
 };
 
@@ -29,66 +29,52 @@ const SupabaseContext = createContext<SupabaseContextType | null>(null);
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true); // True only on initial mount
+  const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (currentSession: Session | null) => {
+  const fetchProfile = async (currentSession: Session | null) => {
     if (currentSession) {
       const { data, error } = await supabase
         .from("profiles")
         .select("*, user_companies(company_id)")
         .eq("id", currentSession.user.id)
-        .limit(1);
+        .single();
 
       if (error) {
         console.error("Error fetching profile:", error.message);
         setProfile(null);
-      } else if (data && data.length > 0) {
-        setProfile(data[0] as Profile);
       } else {
-        setProfile(null);
+        setProfile(data as Profile);
       }
     } else {
       setProfile(null);
     }
-  }, []);
+  };
 
-  const refreshProfile = useCallback(async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    await fetchProfile(currentSession);
-  }, [fetchProfile]);
-
-  // 1. Initial Load Effect: Fetch session and profile immediately on mount
   useEffect(() => {
-    const loadInitialData = async () => {
-      // 1. Get session immediately
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
+    setLoading(true);
 
-      // 2. Fetch profile based on that session
-      await fetchProfile(initialSession);
-
-      // 3. Mark loading complete only after both are done
-      setLoading(false);
-    };
-
-    loadInitialData();
-
-    // 2. Listener Effect: Set up listener for real-time changes (sign in/out)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Only handle changes, not the initial load (which we handled above)
-      if (event !== 'INITIAL_SESSION') {
-        setSession(session);
-        await fetchProfile(session);
+      setSession(session);
+      await fetchProfile(session);
+
+      // The INITIAL_SESSION event is fired only once when the client is initialized.
+      // This is the perfect moment to stop the loading state.
+      if (event === "INITIAL_SESSION") {
+        setLoading(false);
       }
     });
 
-    // Cleanup subscription on unmount
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchProfile]); // fetchProfile is the only dependency
+  }, []);
+
+  const refreshProfile = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    await fetchProfile(currentSession);
+  };
 
   const value = {
     supabase,

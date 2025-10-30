@@ -60,16 +60,16 @@ export default function DashboardPage() {
     }
   }, [loading, profile, fetchVouchers]);
 
-  // This effect will re-fetch data when the user returns to this tab
+  // This effect will re-fetch data when the tab becomes visible again
   useEffect(() => {
-    const handleFocus = () => {
-      if (!loading && profile) {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !loading && profile) {
         fetchVouchers();
       }
     };
-    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loading, profile, fetchVouchers]);
 

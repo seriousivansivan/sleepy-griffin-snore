@@ -10,7 +10,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { supabase, profile, loading } = useSupabaseAuth();
+  const { profile, loading } = useSupabaseAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,20 +20,6 @@ export default function AdminLayout({
       }
     }
   }, [profile, loading, router]);
-
-  // This effect will trigger a session refresh when the tab becomes visible again.
-  // The onAuthStateChange listener in the provider will then handle the profile update gracefully.
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        supabase.auth.refreshSession();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [supabase]);
 
   if (loading || !profile || profile.role !== "admin") {
     return (

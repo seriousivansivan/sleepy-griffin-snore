@@ -51,27 +51,31 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   const refreshProfile = async () => {
+    setLoading(true);
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
+    setLoading(false);
   };
 
   useEffect(() => {
-    // 1. Initialize session immediately on mount
     const initializeSession = async () => {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
       await fetchProfile(currentSession);
-      setLoading(false); // Guaranteed to run once after initial check
+      setLoading(false);
     };
 
     initializeSession();
 
-    // 2. Listen for subsequent auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Set loading to true whenever an auth event occurs
+      setLoading(true);
       setSession(session);
       await fetchProfile(session);
+      // Set loading to false after the session and profile have been updated
+      setLoading(false);
     });
 
     return () => {

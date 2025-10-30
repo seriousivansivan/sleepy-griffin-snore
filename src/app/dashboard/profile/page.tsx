@@ -4,26 +4,10 @@ import { UserProfileView } from "@/components/profile/user-profile-view";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
-import { useEffect } from "react";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { session, loading } = useSupabaseAuth();
-
-  useEffect(() => {
-    if (!loading && !session) {
-      router.replace("/login");
-    }
-  }, [session, loading, router]);
-
-  if (loading || !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  // Auth/Loading is handled by dashboard/layout.tsx
 
   return (
     <div className="min-h-screen bg-muted">

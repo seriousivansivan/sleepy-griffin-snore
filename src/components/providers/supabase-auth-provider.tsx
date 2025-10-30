@@ -61,28 +61,23 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   }, [fetchProfile]);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      // 1. Proactively fetch the session from storage on initial load
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      await fetchProfile(initialSession);
-      setLoading(false); // Initial load is complete
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      await fetchProfile(session);
 
-      // 2. Then, set up a listener for any future auth changes
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        setSession(session);
-        await fetchProfile(session);
-      });
+      // The 'INITIAL_SESSION' event is fired only once when the client initializes.
+      // This is the perfect moment to know that the initial auth check is complete.
+      if (event === 'INITIAL_SESSION') {
+        setLoading(false);
+      }
+    });
 
-      // Cleanup subscription on unmount
-      return () => {
-        subscription.unsubscribe();
-      };
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
     };
-
-    initializeSession();
   }, [fetchProfile]);
 
   const value = {

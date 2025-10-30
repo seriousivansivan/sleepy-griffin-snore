@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useRouter } from "next/navigation"; // Add this import
 
-// Define a type for our profile data
 export type Profile = {
   id: string;
   user_name: string | null;
@@ -32,6 +32,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter(); // Add this
 
   const fetchProfile = async (currentSession: Session | null) => {
     if (currentSession) {
@@ -53,10 +54,8 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    // Initialize session on mount
     const initializeAuth = async () => {
       try {
-        // Get existing session
         const { data: { session: existingSession } } = await supabase.auth.getSession();
         setSession(existingSession);
         setUser(existingSession?.user ?? null);
@@ -70,43 +69,46 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
     initializeAuth();
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log("Auth event:", event); // Debug log
+      console.log("Auth event:", event);
+      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       await fetchProfile(currentSession);
       setLoading(false);
+
+      // Refresh the router cache when auth state changes
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        router.refresh();
+      }
     });
 
-    // Handle tab visibility changes
     const handleVisibilityChange = async () => {
       if (!document.hidden) {
-        // Tab became visible - refresh session
         console.log("Tab visible - refreshing session");
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         if (currentSession) {
-          // Refresh the session to ensure it's valid
           await supabase.auth.refreshSession();
+          router.refresh(); // Refresh router when tab becomes visible
         }
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Cleanup
     return () => {
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [router]);
 
   const refreshProfile = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
+    router.refresh(); // Add router refresh here too
   };
 
   const value = {

@@ -97,6 +97,7 @@ export default function AdminDashboardPage() {
     }
   }, [supabase]);
 
+  // Effect for initial data load and when time range changes
   useEffect(() => {
     const fetchStats = async () => {
       setStatsLoading(true);
@@ -112,11 +113,26 @@ export default function AdminDashboardPage() {
       }
     };
 
-    if (profile?.role === "admin") {
+    if (!loading && profile?.role === "admin") {
       fetchStats();
       fetchDashboardData(timeRange);
     }
-  }, [profile, timeRange, fetchDashboardData, supabase]);
+  }, [loading, profile, timeRange, fetchDashboardData, supabase]);
+
+  // Effect for refreshing data when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !loading && profile?.role === 'admin') {
+        fetchDashboardData(timeRange);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loading, profile, timeRange, fetchDashboardData]);
+
 
   if (loading || !session || profile?.role !== "admin") {
     return (

@@ -5,6 +5,9 @@ import DashboardClient from './dashboard-client';
 import type { Voucher } from '@/components/voucher-list';
 import type { Profile } from '@/components/providers/supabase-auth-provider';
 
+// Force dynamic rendering for this page to ensure cookies() is handled correctly.
+export const dynamic = 'force-dynamic';
+
 // Helper function to get the profile.
 async function getProfile(supabase: any, userId: string) {
   const { data: profile, error } = await supabase
@@ -21,8 +24,13 @@ async function getProfile(supabase: any, userId: string) {
 }
 
 export default async function DashboardPage() {
-  // Pass the cookies function directly
-  const supabase = createServerComponentClient({ cookies });
+  // Explicitly call cookies() once at the top of the server component.
+  // This ensures Next.js recognizes the dynamic API usage within an async boundary.
+  const cookieStore = cookies(); 
+  
+  // Pass a function that returns the cookieStore to createServerComponentClient.
+  // This pattern is often more robust against Next.js's static analysis for dynamic APIs.
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   // 1. Get the session
   const { data: { session } } = await supabase.auth.getSession();

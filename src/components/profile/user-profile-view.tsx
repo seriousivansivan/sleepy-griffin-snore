@@ -130,6 +130,19 @@ export function UserProfileView() {
     }
   }, [authLoading, fetchData, filterRange]);
 
+  // Re-fetch data when the tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !authLoading && profile) {
+        fetchData(filterRange);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authLoading, profile, filterRange, fetchData]);
+
   const totalVoucherAmount = vouchers.reduce(
     (sum, v) => sum + v.total_amount,
     0

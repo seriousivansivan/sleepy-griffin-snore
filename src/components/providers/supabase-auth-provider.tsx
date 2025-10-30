@@ -1,100 +1,43 @@
-"use client";
+'use client'
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { Session, SupabaseClient } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
 
-// Define a type for our profile data
-export type Profile = {
-  id: string;
-  user_name: string | null;
-  role: string;
-  monthly_credit_allowance: number | null;
-  credit: number | null;
-  has_unlimited_credit: boolean | null;
-  updated_at: string;
-  user_companies: { company_id: string }[];
-};
+const SupabaseAuthContext = createContext({
+  user: null,
+  loading: true,
+})
 
-type SupabaseContextType = {
-  supabase: SupabaseClient;
-  session: Session | null;
-  profile: Profile | null;
-  loading: boolean;
-  refreshProfile: () => Promise<void>;
-};
-
-const SupabaseContext = createContext<SupabaseContextType | null>(null);
-
-export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchProfile = async (currentSession: Session | null) => {
-    if (currentSession) {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*, user_companies(company_id)")
-        .eq("id", currentSession.user.id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching profile:", error.message);
-        setProfile(null);
-      } else {
-        setProfile(data as Profile);
-      }
-    } else {
-      setProfile(null);
-    }
-  };
+export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true);
+    // 1️⃣ Get initial session from Supabase
+    const getInitialSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      setUser(data?.session?.user ?? null)
+      setLoading(false)
+    }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      await fetchProfile(session);
+    getInitialSession()
 
-      // The INITIAL_SESSION event is fired only once when the client is initialized.
-      // This is the perfect moment to stop the loading state.
-      if (event === "INITIAL_SESSION") {
-        setLoading(false);
-      }
-    });
+    // 2️⃣ Listen for session changes (login/logout/refresh)
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
 
     return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const refreshProfile = async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    await fetchProfile(currentSession);
-  };
-
-  const value = {
-    supabase,
-    session,
-    profile,
-    loading,
-    refreshProfile,
-  };
+      subscription.subscription.unsubscribe()
+    }
+  }, [])
 
   return (
-    <SupabaseContext.Provider value={value}>
+    <SupabaseAuthContext.Provider value={{ user, loading }}>
       {children}
-    </SupabaseContext.Provider>
-  );
-};
+    </SupabaseAuthContext.Provider>
+  )
+}
 
-export const useSupabaseAuth = () => {
-  const context = useContext(SupabaseContext);
-  if (context === null) {
-    throw new Error("useSupabaseAuth must be used within a SupabaseAuthProvider");
-  }
-  return context;
-};
+// 3️⃣ Hook for easy use
+export const useSupabaseAuth = () => useContext(SupabaseAuthContext)

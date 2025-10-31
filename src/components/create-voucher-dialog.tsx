@@ -124,16 +124,6 @@ export function CreateVoucherDialog({
       0
     );
 
-    if (
-      profile &&
-      !profile.has_unlimited_credit &&
-      (profile.credit ?? 0) < calculatedTotalAmount // FIX: Safely access profile.credit
-    ) {
-      toast.error("Insufficient credit to create this voucher.");
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
       const { data, error } = await supabase.rpc(
         "create_voucher_and_deduct_credit",

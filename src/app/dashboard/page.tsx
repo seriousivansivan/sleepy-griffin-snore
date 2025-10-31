@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Shield } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { cn } from "@/lib/utils";
 
 const VOUCHERS_PER_PAGE = 10;
 
@@ -94,7 +95,14 @@ export default function DashboardPage() {
             </p>
             <p className="text-sm text-muted-foreground mt-2">
               Remaining Credit:{" "}
-              <span className="font-semibold text-foreground">
+              <span
+                className={cn(
+                  "font-semibold",
+                  !profile.has_unlimited_credit && (profile.credit ?? 0) < 0
+                    ? "text-destructive"
+                    : "text-foreground"
+                )}
+              >
                 {profile.has_unlimited_credit
                   ? "Unlimited"
                   : (profile.credit ?? 0).toLocaleString(undefined, {

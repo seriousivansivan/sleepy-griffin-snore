@@ -31,6 +31,7 @@ import { Loader2 } from "lucide-react";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserEmail } from "@/hooks/use-user-email";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   role: z.enum(["user", "admin"]),
@@ -293,7 +294,14 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                 />
                 <p className="text-xs text-muted-foreground">
                   Current Remaining Credit:{" "}
-                  <span className="font-medium">
+                  <span
+                    className={cn(
+                      "font-medium",
+                      !user.has_unlimited_credit &&
+                        (user.credit ?? 0) < 0 &&
+                        "text-destructive"
+                    )}
+                  >
                     {user.has_unlimited_credit
                       ? "Unlimited"
                       : (user.credit ?? 0).toLocaleString(undefined, {

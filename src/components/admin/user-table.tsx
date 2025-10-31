@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Profile } from "@/components/providers/supabase-auth-provider";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 type UserTableProps = {
   users: Profile[];
@@ -59,7 +60,14 @@ export function UserTable({ users }: UserTableProps) {
                   )
                 )}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell
+                className={cn(
+                  "text-right",
+                  !user.has_unlimited_credit &&
+                    (user.credit ?? 0) < 0 &&
+                    "text-destructive"
+                )}
+              >
                 {user.has_unlimited_credit ? (
                   <Badge variant="outline">Unlimited</Badge>
                 ) : (

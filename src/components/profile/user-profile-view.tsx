@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { EditProfileForm } from "./edit-profile-form";
+import { cn } from "@/lib/utils";
 
 type Company = {
   id: string;
@@ -266,7 +267,13 @@ export function UserProfileView() {
                       <p className="font-medium text-muted-foreground">
                         Remaining Credit
                       </p>
-                      <p>
+                      <p
+                        className={cn(
+                          !profile.has_unlimited_credit &&
+                            (profile.credit ?? 0) < 0 &&
+                            "text-destructive"
+                        )}
+                      >
                         {profile.has_unlimited_credit
                           ? "Unlimited"
                           : (profile.credit ?? 0).toLocaleString(undefined, {

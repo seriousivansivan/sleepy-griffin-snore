@@ -1,10 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { Session, SupabaseClient, User } from "@supabase/supabase-js";
+import { Session, SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation";
 
+// Define a type for our profile data
 export type Profile = {
   id: string;
   user_name: string | null;
@@ -20,28 +20,16 @@ type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
   profile: Profile | null;
-  user: User | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
 };
 
 const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
-// Update props to accept the server-side session
-export const SupabaseAuthProvider = ({
-  children,
-  session: serverSession, // Rename to avoid conflict
-}: {
-  children: React.ReactNode;
-  session: Session | null;
-}) => {
-  // Initialize state with the server-side session
-  const [session, setSession] = useState<Session | null>(serverSession);
-  const [user, setUser] = useState<User | null>(serverSession?.user ?? null);
+export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  // Start with loading as false if we have a server session, otherwise true
-  const [loading, setLoading] = useState(serverSession === null);
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (currentSession: Session | null) => {
     if (currentSession) {
@@ -63,58 +51,35 @@ export const SupabaseAuthProvider = ({
   };
 
   useEffect(() => {
-    // Fetch profile immediately if we have a server session
-    if (serverSession) {
-      fetchProfile(serverSession).finally(() => setLoading(false));
-    }
+    setLoading(true);
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log("Auth event:", event);
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      await fetchProfile(currentSession);
-      setLoading(false);
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      await fetchProfile(session);
 
-      // Refresh the router cache when auth state changes
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        router.refresh();
+      // The INITIAL_SESSION event is fired only once when the client is initialized.
+      // This is the perfect moment to stop the loading state.
+      if (event === "INITIAL_SESSION") {
+        setLoading(false);
       }
     });
 
-    const handleVisibilityChange = async () => {
-      if (!document.hidden) {
-        console.log("Tab visible - refreshing session");
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (currentSession) {
-          await supabase.auth.refreshSession();
-          router.refresh(); // Refresh router when tab becomes visible
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
       subscription.unsubscribe();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [router, serverSession]); // Depend on serverSession to re-run if it changes
+  }, []);
 
   const refreshProfile = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
-    router.refresh(); // Add router refresh here too
   };
 
   const value = {
     supabase,
     session,
     profile,
-    user,
     loading,
     refreshProfile,
   };

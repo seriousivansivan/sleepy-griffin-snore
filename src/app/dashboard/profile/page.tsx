@@ -1,25 +1,11 @@
-import { createClient } from "@/integrations/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { UserProfileView } from "@/components/profile/user-profile-view";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-export const dynamic = "force-dynamic";
-
-export default async function ProfilePage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    redirect("/login");
-  }
-
+// This component no longer needs to be async or use server-only imports,
+// as the new layout handles all authentication checks.
+export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-muted">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">

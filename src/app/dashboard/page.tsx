@@ -1,136 +1,63 @@
-"use client";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import DashboardClient from "./dashboard-client";
+import type { Profile } from "@/components/providers/supabase-auth-provider";
+import type { Voucher } from "@/components/voucher-list";
 
-import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { VoucherList, Voucher } from "@/components/voucher-list";
-import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
-import Link from "next/link";
-import { Shield } from "lucide-react";
-import { UserNav } from "@/components/user-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
+// This tells Next.js to re-evaluate this page on every request
+export const dynamic = "force-dynamic";
 
-const VOUCHERS_PER_PAGE = 10;
+export default async function DashboardPage() {
+  const supabase = createServerComponentClient({ cookies });
 
-export default function DashboardPage() {
-  const { session, supabase, loading, profile } = useSupabaseAuth();
-  const router = useRouter();
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [vouchersLoading, setVouchersLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  useEffect(() => {
-    if (!loading) {
-      if (!session) {
-        router.replace("/login");
-      } else if (!profile?.user_name || profile.user_companies.length === 0) {
-        router.replace("/complete-profile");
-      }
-    }
-  }, [session, loading, router, profile]);
+  if (!session) {
+    redirect("/login");
+  }
 
-  const fetchVouchers = useCallback(async () => {
-    setVouchersLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("vouchers")
-        .select(`
-          *,
-          companies(*),
-          user:profiles!user_id(id, user_name)
-        `)
-        .order("created_at", { ascending: false });
+  // Fetch profile on the server
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*, user_companies(company_id)")
+    .eq("id", session.user.id)
+    .single();
 
-      if (error) {
-        throw error;
-      }
-      setVouchers(data as Voucher[] || []);
-      setCurrentPage(1);
-    } catch (error) {
-      console.error("Error fetching vouchers:", error);
-    } finally {
-      setVouchersLoading(false);
-    }
-  }, [supabase]);
+  if (profileError || !profile) {
+    console.error("Error fetching profile for dashboard:", profileError);
+    redirect("/login");
+  }
 
-  useEffect(() => {
-    if (!loading && profile) {
-      fetchVouchers();
-    }
-  }, [loading, profile, fetchVouchers]);
+  // Check if profile is complete
+  if (!profile.user_name || profile.user_companies.length === 0) {
+    redirect("/complete-profile");
+  }
 
-  const totalPages = useMemo(() => {
-    return Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
-  }, [vouchers.length]);
+  // Fetch initial vouchers on the server
+  const { data: initialVouchers, error: vouchersError } = await supabase
+    .from("vouchers")
+    .select(
+      `
+      *,
+      companies(*),
+      user:profiles!user_id(id, user_name)
+    `
+    )
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false });
 
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  if (
-    loading ||
-    !session ||
-    !profile?.user_name ||
-    profile.user_companies.length === 0
-  ) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
+  if (vouchersError) {
+    console.error("Error fetching initial vouchers:", vouchersError);
+    // We can still render the page but with an empty voucher list
   }
 
   return (
-    <div className="min-h-screen bg-muted">
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Welcome back, {profile.user_name}.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Remaining Credit:{" "}
-              <span className="font-semibold text-foreground">
-                {profile.has_unlimited_credit
-                  ? "Unlimited"
-                  : (profile.credit ?? 0).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-              </span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {profile.role === "admin" && (
-              <Button variant="outline" asChild>
-                <Link href="/admin/dashboard">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Admin Panel
-                </Link>
-              </Button>
-            )}
-            <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </header>
-
-        <main>
-          <VoucherList
-            vouchers={vouchers}
-            isLoading={vouchersLoading}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            showCreator={false}
-          />
-        </main>
-      </div>
-    </div>
+    <DashboardClient
+      profile={profile as Profile}
+      initialVouchers={(initialVouchers as Voucher[]) || []}
+    />
   );
 }
-

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation"; // Add this import
+import { useRouter } from "next/navigation";
 
 export type Profile = {
   id: string;
@@ -27,12 +27,21 @@ type SupabaseContextType = {
 
 const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
-export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+// Update props to accept the server-side session
+export const SupabaseAuthProvider = ({
+  children,
+  session: serverSession, // Rename to avoid conflict
+}: {
+  children: React.ReactNode;
+  session: Session | null;
+}) => {
+  // Initialize state with the server-side session
+  const [session, setSession] = useState<Session | null>(serverSession);
+  const [user, setUser] = useState<User | null>(serverSession?.user ?? null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter(); // Add this
+  // Start with loading as false if we have a server session, otherwise true
+  const [loading, setLoading] = useState(serverSession === null);
+  const router = useRouter();
 
   const fetchProfile = async (currentSession: Session | null) => {
     if (currentSession) {
@@ -54,20 +63,10 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        setSession(existingSession);
-        setUser(existingSession?.user ?? null);
-        await fetchProfile(existingSession);
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
+    // Fetch profile immediately if we have a server session
+    if (serverSession) {
+      fetchProfile(serverSession).finally(() => setLoading(false));
+    }
 
     const {
       data: { subscription },
@@ -103,7 +102,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [router]);
+  }, [router, serverSession]); // Depend on serverSession to re-run if it changes
 
   const refreshProfile = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();

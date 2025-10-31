@@ -1,25 +1,38 @@
-"use client";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+// This tells Next.js to re-evaluate this page on every request
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const { session, loading, profile } = useSupabaseAuth();
-  const router = useRouter();
+export default async function Home() {
+  const supabase = createServerComponentClient({ cookies });
 
-  useEffect(() => {
-    if (!loading) {
-      if (!session) {
-        router.replace("/login");
-      } else if (!profile?.user_name || profile.user_companies.length === 0) {
-        router.replace("/complete-profile");
-      } else {
-        router.replace("/dashboard");
-      }
-    }
-  }, [session, loading, router, profile]);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
+  if (!session) {
+    redirect("/login");
+  }
+
+  // We have a session, now check if the profile is complete
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_name, user_companies(company_id)")
+    .eq("id", session.user.id)
+    .single();
+
+  if (!profile || !profile.user_name || profile.user_companies.length === 0) {
+    redirect("/complete-profile");
+  }
+
+  // If session and profile are good, go to the dashboard
+  redirect("/dashboard");
+
+  // This part will never be reached due to redirects, but it's good practice
+  // to return something, even if it's just a loading indicator for non-JS clients
+  // or during the brief moment before the redirect is processed.
   return (
     <div className="min-h-screen flex items-center justify-center">
       <p>Loading...</p>

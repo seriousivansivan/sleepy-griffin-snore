@@ -1,13 +1,13 @@
 "use client"; // <-- This file MUST have "use client"
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { CreateVoucherDialog } from "@/components/create-voucher-dialog";
 import { VoucherList, Voucher } from "@/components/voucher-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building, Ticket, User } from "lucide-react";
-import { StatCard } from "@/components/admin/stat-card"; // Reusing StatCard for user dashboard
+import { StatCard } from "@/components/admin/stat-card";
 import {
   TimeFilter,
   TimeRange,
@@ -28,8 +28,8 @@ import { VoucherCompanyDistributionChart } from "@/components/admin/voucher-comp
 import { Profile } from "@/components/providers/supabase-auth-provider";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import Image from "next/image"; // Added Image import
-import { UserNav } from "@/components/user-nav"; // Added UserNav import
+import Image from "next/image";
+import { UserNav } from "@/components/user-nav";
 
 type DashboardClientProps = {
   profile: Profile;
@@ -108,6 +108,7 @@ export default function DashboardClient({
   }, [supabase, profile.id]);
 
   useEffect(() => {
+    // We set initial vouchers from props, so we only fetch when the filter changes.
     fetchVouchers(filterRange);
   }, [fetchVouchers, filterRange]);
 
@@ -191,7 +192,7 @@ export default function DashboardClient({
             </Button>
           )}
           <ThemeToggle />
-          <UserNav /> {/* Added UserNav back */}
+          <UserNav />
         </div>
       </div>
 
@@ -207,7 +208,7 @@ export default function DashboardClient({
                 })
           }
           icon={<Ticket className="h-4 w-4 text-muted-foreground" />}
-          isLoading={false} // Profile data is already loaded
+          isLoading={false}
           href="/dashboard/profile"
         />
         <StatCard
@@ -242,8 +243,8 @@ export default function DashboardClient({
           <div className="flex items-center gap-4">
             <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
             <CreateVoucherDialog onVoucherCreated={() => {
-              fetchVouchers(filterRange); // Refresh vouchers after creation
-              refreshProfile(); // Refresh profile to update credit
+              fetchVouchers(filterRange);
+              refreshProfile();
             }} />
           </div>
         </div>

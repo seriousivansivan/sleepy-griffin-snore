@@ -5,11 +5,11 @@ import DashboardClient from "./dashboard-client";
 import type { Profile } from "@/components/providers/supabase-auth-provider";
 import type { Voucher } from "@/components/voucher-list";
 
-// This tells Next.js to re-evaluate this page on every request
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   const {
     data: { session },
@@ -19,7 +19,6 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Fetch profile on the server
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*, user_companies(company_id)")
@@ -31,12 +30,10 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Check if profile is complete
   if (!profile.user_name || profile.user_companies.length === 0) {
     redirect("/complete-profile");
   }
 
-  // Fetch initial vouchers on the server
   const { data: initialVouchers, error: vouchersError } = await supabase
     .from("vouchers")
     .select(
@@ -51,7 +48,6 @@ export default async function DashboardPage() {
 
   if (vouchersError) {
     console.error("Error fetching initial vouchers:", vouchersError);
-    // We can still render the page but with an empty voucher list
   }
 
   return (

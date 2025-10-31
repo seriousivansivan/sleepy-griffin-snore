@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import DashboardClient from "./dashboard-client";
 import type { Profile } from "@/components/providers/supabase-auth-provider";
 import type { Voucher } from "@/components/voucher-list";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
   const {
     data: { session },

@@ -26,7 +26,11 @@ type SupabaseContextType = {
 
 const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
-export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const SupabaseAuthProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,28 +55,42 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    setLoading(true);
+    // This function handles the initial session check and sets up the listener.
+    const initializeSession = async () => {
+      // 1. Proactively get the current session from Supabase.
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+      setSession(currentSession);
 
+      // 2. Fetch the user's profile based on this session.
+      await fetchProfile(currentSession);
+
+      // 3. The initial check is complete, so we can stop the loading state.
+      setLoading(false);
+    };
+
+    // Run the initialization.
+    initializeSession();
+
+    // 4. Set up a listener for any future changes in authentication state.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       await fetchProfile(session);
-
-      // The INITIAL_SESSION event is fired only once when the client is initialized.
-      // This is the perfect moment to stop the loading state.
-      if (event === "INITIAL_SESSION") {
-        setLoading(false);
-      }
     });
 
+    // 5. The cleanup function will unsubscribe from the listener when the component unmounts.
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
   const refreshProfile = async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const {
+      data: { session: currentSession },
+    } = await supabase.auth.getSession();
     await fetchProfile(currentSession);
   };
 
@@ -94,7 +112,9 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 export const useSupabaseAuth = () => {
   const context = useContext(SupabaseContext);
   if (context === null) {
-    throw new Error("useSupabaseAuth must be used within a SupabaseAuthProvider");
+    throw new Error(
+      "useSupabaseAuth must be used within a SupabaseAuthProvider"
+    );
   }
   return context;
 };

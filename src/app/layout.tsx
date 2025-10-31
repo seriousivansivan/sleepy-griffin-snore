@@ -4,9 +4,7 @@ import "./globals.css";
 import { SupabaseAuthProvider } from "@/components/providers/supabase-auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import type { Session } from "@supabase/supabase-js";
+import { createClient } from "@/integrations/supabase/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +28,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

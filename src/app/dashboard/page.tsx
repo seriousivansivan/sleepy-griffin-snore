@@ -1,5 +1,4 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@/integrations/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardClient from "./dashboard-client";
 import type { Profile } from "@/components/providers/supabase-auth-provider";
@@ -8,8 +7,7 @@ import type { Voucher } from "@/components/voucher-list";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const supabase = createClient();
 
   const {
     data: { session },

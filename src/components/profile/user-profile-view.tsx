@@ -400,7 +400,7 @@ export function UserProfileView() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">
-                  Credit Snapshot
+                  Remaining Credit
                 </CardTitle>
                 <CardDescription>Balance as of {filterEndDate}</CardDescription>
               </CardHeader>

@@ -18,7 +18,7 @@ import {
   TimeRange,
   calculateDateRange,
 } from "@/components/admin/time-filter";
-import { formatISO, format, parseISO } from "date-fns";
+import { formatISO, format, parseISO, endOfWeek, endOfMonth, subMonths, endOfYear } from "date-fns";
 import {
   LineChart,
   Line,
@@ -210,8 +210,18 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
 
   const filterEndDate = useMemo(() => {
     if (filterRange === "all") return null;
-    const { end } = calculateDateRange(filterRange);
-    return end ? format(end, "PPP") : null;
+    // This logic is duplicated from calculateDateRange but is necessary to get the
+    // correct LOCAL end date for display, avoiding timezone conversion issues with format().
+    const now = new Date();
+    let localEnd: Date | null = null;
+    switch (filterRange) {
+        case "this_week": localEnd = endOfWeek(now, { weekStartsOn: 1 }); break;
+        case "this_month": localEnd = endOfMonth(now); break;
+        case "last_month": localEnd = endOfMonth(subMonths(now, 1)); break;
+        case "this_year": localEnd = endOfYear(now); break;
+        default: return null;
+    }
+    return localEnd ? format(localEnd, "PPP") : null;
   }, [filterRange]);
 
   return (

@@ -34,10 +34,15 @@ const safeSessionStorage = {
 
 const options: SupabaseClientOptions<"public"> = {
     auth: {
+        // Use sessionStorage for tab-specific persistence
         storage: safeSessionStorage,
+        // Ensure a unique key for the session storage item
+        storageKey: 'sb-session-key', 
         autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
+        // We must persist the session to storage for the current tab's lifetime
+        persistSession: true, 
+        // Detect session in URL is usually necessary for OAuth/magic link redirects
+        detectSessionInUrl: true 
     }
 };
 

@@ -100,7 +100,7 @@ export default function UserDetailPage() {
 
         {/* Right Column: Activity Overview (2/3 width) */}
         <div className="lg:col-span-2">
-          <UserActivityOverview userId={user.id} />
+          <UserActivityOverview user={user} />
         </div>
       </div>
     </div>

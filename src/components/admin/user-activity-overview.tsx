@@ -29,9 +29,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import type { Profile } from "@/components/providers/supabase-auth-provider";
 
 type UserActivityOverviewProps = {
-  userId: string;
+  user: Profile;
 };
 
 const COLORS = [
@@ -61,15 +62,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
+export function UserActivityOverview({ user }: UserActivityOverviewProps) {
   const { supabase } = useSupabaseAuth();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRange, setFilterRange] = useState<TimeRange>("all");
-  const [historicalCredit, setHistoricalCredit] = useState<number | null>(null);
-  const [isHistoricalCreditLoading, setIsHistoricalCreditLoading] =
-    useState(false);
 
   const fetchData = useCallback(
     async (range: TimeRange) => {
@@ -82,7 +80,7 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
         const { data, error } = await supabase.rpc(
           "get_vouchers_by_user_id_for_admin",
           {
-            p_user_id: userId,
+            p_user_id: user.id,
             p_start_date,
             p_end_date,
           }
@@ -115,47 +113,26 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
         setDataLoading(false);
       }
     },
-    [supabase, userId]
+    [supabase, user.id]
   );
 
   useEffect(() => {
-    const fetchHistoricalCredit = async () => {
-      if (filterRange === "all" || !userId) {
-        setHistoricalCredit(null);
-        return;
-      }
-
-      setIsHistoricalCreditLoading(true);
-      const { end } = calculateDateRange(filterRange);
-
-      if (end) {
-        const { data, error } = await supabase.rpc(
-          "get_credit_balance_at_date",
-          {
-            p_user_id: userId,
-            p_target_date: end.toISOString(),
-          }
-        );
-
-        if (error) {
-          console.error("Error fetching historical credit:", error);
-          setHistoricalCredit(null);
-        } else {
-          setHistoricalCredit(data);
-        }
-      }
-      setIsHistoricalCreditLoading(false);
-    };
-
     fetchData(filterRange);
-    fetchHistoricalCredit();
-  }, [fetchData, filterRange, supabase, userId]);
+  }, [fetchData, filterRange]);
 
   const totalVoucherAmount = vouchers.reduce(
     (sum, v) => sum + v.total_amount,
     0
   );
   const totalPages = Math.ceil(vouchers.length / 10);
+
+  const historicalCredit = useMemo(() => {
+    if (filterRange === "all" || !user || user.has_unlimited_credit) {
+      return null;
+    }
+    const allowance = user.monthly_credit_allowance ?? 0;
+    return allowance - totalVoucherAmount;
+  }, [filterRange, user, totalVoucherAmount]);
 
   const { chartData, companyNames } = useMemo(() => {
     if (vouchers.length === 0) return { chartData: [], companyNames: [] };
@@ -213,9 +190,7 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
     const { end } = calculateDateRange(filterRange);
     if (!end) return null;
 
-    // To format a UTC date as if it were local, we can add the timezone offset
-    // to "trick" the format function into ignoring the local timezone conversion.
-    const timezoneOffset = end.getTimezoneOffset() * 60000; // offset in milliseconds
+    const timezoneOffset = end.getTimezoneOffset() * 60000;
     const adjustedDate = new Date(end.getTime() + timezoneOffset);
 
     return format(adjustedDate, "PPP");
@@ -278,7 +253,7 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
                 <CardDescription>Balance as of {filterEndDate}</CardDescription>
               </CardHeader>
               <CardContent>
-                {isHistoricalCreditLoading ? (
+                {dataLoading ? (
                   <Skeleton className="h-8 w-24" />
                 ) : (
                   <div className="text-2xl font-bold">

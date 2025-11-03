@@ -74,9 +74,6 @@ export function UserProfileView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRange, setFilterRange] = useState<TimeRange>("all");
   const [isEditing, setIsEditing] = useState(false);
-  const [historicalCredit, setHistoricalCredit] = useState<number | null>(null);
-  const [isHistoricalCreditLoading, setIsHistoricalCreditLoading] =
-    useState(false);
 
   const fetchData = useCallback(
     async (range: TimeRange) => {
@@ -129,45 +126,24 @@ export function UserProfileView() {
   );
 
   useEffect(() => {
-    const fetchHistoricalCredit = async () => {
-      if (filterRange === "all" || !profile) {
-        setHistoricalCredit(null);
-        return;
-      }
-
-      setIsHistoricalCreditLoading(true);
-      const { end } = calculateDateRange(filterRange);
-
-      if (end) {
-        const { data, error } = await supabase.rpc(
-          "get_credit_balance_at_date",
-          {
-            p_user_id: profile.id,
-            p_target_date: end.toISOString(),
-          }
-        );
-
-        if (error) {
-          console.error("Error fetching historical credit:", error);
-          setHistoricalCredit(null);
-        } else {
-          setHistoricalCredit(data);
-        }
-      }
-      setIsHistoricalCreditLoading(false);
-    };
-
     if (!authLoading) {
       fetchData(filterRange);
-      fetchHistoricalCredit();
     }
-  }, [authLoading, fetchData, filterRange, profile, supabase]);
+  }, [authLoading, fetchData, filterRange]);
 
   const totalVoucherAmount = vouchers.reduce(
     (sum, v) => sum + v.total_amount,
     0
   );
   const totalPages = Math.ceil(vouchers.length / 10);
+
+  const historicalCredit = useMemo(() => {
+    if (filterRange === "all" || !profile || profile.has_unlimited_credit) {
+      return null;
+    }
+    const allowance = profile.monthly_credit_allowance ?? 0;
+    return allowance - totalVoucherAmount;
+  }, [filterRange, profile, totalVoucherAmount]);
 
   const { chartData, companyNames } = useMemo(() => {
     if (vouchers.length === 0) return { chartData: [], companyNames: [] };
@@ -225,9 +201,7 @@ export function UserProfileView() {
     const { end } = calculateDateRange(filterRange);
     if (!end) return null;
 
-    // To format a UTC date as if it were local, we can add the timezone offset
-    // to "trick" the format function into ignoring the local timezone conversion.
-    const timezoneOffset = end.getTimezoneOffset() * 60000; // offset in milliseconds
+    const timezoneOffset = end.getTimezoneOffset() * 60000;
     const adjustedDate = new Date(end.getTime() + timezoneOffset);
 
     return format(adjustedDate, "PPP");
@@ -412,7 +386,7 @@ export function UserProfileView() {
                 <CardDescription>Balance as of {filterEndDate}</CardDescription>
               </CardHeader>
               <CardContent>
-                {isHistoricalCreditLoading ? (
+                {dataLoading ? (
                   <Skeleton className="h-8 w-24" />
                 ) : (
                   <div className="text-2xl font-bold">

@@ -74,6 +74,9 @@ export function UserProfileView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRange, setFilterRange] = useState<TimeRange>("all");
   const [isEditing, setIsEditing] = useState(false);
+  const [historicalCredit, setHistoricalCredit] = useState<number | null>(null);
+  const [isHistoricalCreditLoading, setIsHistoricalCreditLoading] =
+    useState(false);
 
   const fetchData = useCallback(
     async (range: TimeRange) => {
@@ -126,10 +129,39 @@ export function UserProfileView() {
   );
 
   useEffect(() => {
+    const fetchHistoricalCredit = async () => {
+      if (filterRange === "all" || !profile) {
+        setHistoricalCredit(null);
+        return;
+      }
+
+      setIsHistoricalCreditLoading(true);
+      const { end } = calculateDateRange(filterRange);
+
+      if (end) {
+        const { data, error } = await supabase.rpc(
+          "get_credit_balance_at_date",
+          {
+            p_user_id: profile.id,
+            p_target_date: end.toISOString(),
+          }
+        );
+
+        if (error) {
+          console.error("Error fetching historical credit:", error);
+          setHistoricalCredit(null);
+        } else {
+          setHistoricalCredit(data);
+        }
+      }
+      setIsHistoricalCreditLoading(false);
+    };
+
     if (!authLoading) {
       fetchData(filterRange);
+      fetchHistoricalCredit();
     }
-  }, [authLoading, fetchData, filterRange]);
+  }, [authLoading, fetchData, filterRange, profile, supabase]);
 
   const totalVoucherAmount = vouchers.reduce(
     (sum, v) => sum + v.total_amount,
@@ -187,6 +219,12 @@ export function UserProfileView() {
       setCurrentPage(page);
     }
   };
+
+  const filterEndDate = useMemo(() => {
+    if (filterRange === "all") return null;
+    const { end } = calculateDateRange(filterRange);
+    return end ? format(end, "PPP") : null;
+  }, [filterRange]);
 
   if (authLoading || !profile) {
     return (
@@ -316,36 +354,81 @@ export function UserProfileView() {
         <div className="flex justify-end">
           <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Vouchers Created
-                </CardTitle>
-                <span className="text-sm font-semibold text-muted-foreground">
-                  THB
-                </span>
-              </div>
+              <CardTitle className="text-sm font-medium">
+                Voucher Spend
+              </CardTitle>
+              <CardDescription>
+                Total value of vouchers in this period.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               {dataLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {totalVoucherAmount.toLocaleString(undefined, {
-                      style: "currency",
-                      currency: "THB",
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {vouchers.length} vouchers in total
-                  </p>
-                </>
+                <div className="text-2xl font-bold">
+                  {totalVoucherAmount.toLocaleString(undefined, {
+                    style: "currency",
+                    currency: "THB",
+                  })}
+                </div>
               )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Vouchers Created
+              </CardTitle>
+              <CardDescription>
+                Total number of vouchers in this period.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="h-60 p-2">
+            <CardContent>
+              {dataLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{vouchers.length}</div>
+              )}
+            </CardContent>
+          </Card>
+          {filterRange !== "all" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Credit Snapshot
+                </CardTitle>
+                <CardDescription>Balance as of {filterEndDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isHistoricalCreditLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <div className="text-2xl font-bold">
+                    {historicalCredit !== null
+                      ? historicalCredit.toLocaleString(undefined, {
+                          style: "currency",
+                          currency: "THB",
+                        })
+                      : "N/A"}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Spend Trend</CardTitle>
+            </CardHeader>
+            <CardContent className="h-64 p-2">
               {dataLoading ? (
                 <Skeleton className="h-full w-full" />
               ) : chartData.length === 0 ? (
@@ -388,6 +471,7 @@ export function UserProfileView() {
             isLoading={dataLoading}
           />
         </div>
+
         <VoucherList
           vouchers={vouchers}
           isLoading={dataLoading}

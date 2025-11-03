@@ -9,6 +9,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -66,6 +67,9 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
   const [dataLoading, setDataLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterRange, setFilterRange] = useState<TimeRange>("all");
+  const [historicalCredit, setHistoricalCredit] = useState<number | null>(null);
+  const [isHistoricalCreditLoading, setIsHistoricalCreditLoading] =
+    useState(false);
 
   const fetchData = useCallback(
     async (range: TimeRange) => {
@@ -86,7 +90,6 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
 
         if (error) throw error;
 
-        // Since RPC returns a flat structure, we need to fetch company details separately
         const companyIds = [...new Set(data.map((v: any) => v.company_id))];
         const { data: companiesData, error: companiesError } = await supabase
           .from("companies")
@@ -100,7 +103,7 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
           ...v,
           details: v.details as Voucher["details"],
           companies: companyMap.get(v.company_id) || null,
-          user: null, // User info is not needed here
+          user: null,
         }));
 
         setVouchers(formattedVouchers || []);
@@ -116,8 +119,37 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
   );
 
   useEffect(() => {
+    const fetchHistoricalCredit = async () => {
+      if (filterRange === "all" || !userId) {
+        setHistoricalCredit(null);
+        return;
+      }
+
+      setIsHistoricalCreditLoading(true);
+      const { end } = calculateDateRange(filterRange);
+
+      if (end) {
+        const { data, error } = await supabase.rpc(
+          "get_credit_balance_at_date",
+          {
+            p_user_id: userId,
+            p_target_date: end.toISOString(),
+          }
+        );
+
+        if (error) {
+          console.error("Error fetching historical credit:", error);
+          setHistoricalCredit(null);
+        } else {
+          setHistoricalCredit(data);
+        }
+      }
+      setIsHistoricalCreditLoading(false);
+    };
+
     fetchData(filterRange);
-  }, [fetchData, filterRange]);
+    fetchHistoricalCredit();
+  }, [fetchData, filterRange, supabase, userId]);
 
   const totalVoucherAmount = vouchers.reduce(
     (sum, v) => sum + v.total_amount,
@@ -176,6 +208,12 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
     }
   };
 
+  const filterEndDate = useMemo(() => {
+    if (filterRange === "all") return null;
+    const { end } = calculateDateRange(filterRange);
+    return end ? format(end, "PPP") : null;
+  }, [filterRange]);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between border-b p-4">
@@ -183,72 +221,115 @@ export function UserActivityOverview({ userId }: UserActivityOverviewProps) {
         <TimeFilter range={filterRange} onRangeChange={setFilterRange} />
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        {/* Chart Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
               <CardTitle className="text-sm font-medium">
-                Total Vouchers Created
+                Voucher Spend
               </CardTitle>
-              <span className="text-sm font-semibold text-muted-foreground">
-                THB
-              </span>
+              <CardDescription>
+                Total value of vouchers in this period.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {dataLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {totalVoucherAmount.toLocaleString(undefined, {
-                      style: "currency",
-                      currency: "THB",
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {vouchers.length} vouchers in total
-                  </p>
-                </>
+                <div className="text-2xl font-bold">
+                  {totalVoucherAmount.toLocaleString(undefined, {
+                    style: "currency",
+                    currency: "THB",
+                  })}
+                </div>
               )}
-              <div className="h-60 p-2 -ml-4">
-                {dataLoading ? (
-                  <Skeleton className="h-full w-full" />
-                ) : chartData.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    No data to display trend.
-                  </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Vouchers Created
+              </CardTitle>
+              <CardDescription>
+                Total number of vouchers in this period.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dataLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{vouchers.length}</div>
+              )}
+            </CardContent>
+          </Card>
+          {filterRange !== "all" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Credit Snapshot
+                </CardTitle>
+                <CardDescription>Balance as of {filterEndDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isHistoricalCreditLoading ? (
+                  <Skeleton className="h-8 w-24" />
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis
-                        tickFormatter={(value) =>
-                          new Intl.NumberFormat("en-US", {
-                            notation: "compact",
-                            compactDisplay: "short",
-                          }).format(value)
-                        }
-                        tick={{ fontSize: 12 }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      {companyNames.map((companyName, index) => (
-                        <Line
-                          key={companyName}
-                          type="monotone"
-                          dataKey={companyName}
-                          stroke={COLORS[index % COLORS.length]}
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div className="text-2xl font-bold">
+                    {historicalCredit !== null
+                      ? historicalCredit.toLocaleString(undefined, {
+                          style: "currency",
+                          currency: "THB",
+                        })
+                      : "N/A"}
+                  </div>
                 )}
-              </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Spend Trend</CardTitle>
+            </CardHeader>
+            <CardContent className="h-64 p-2">
+              {dataLoading ? (
+                <Skeleton className="h-full w-full" />
+              ) : chartData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No data to display trend.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis
+                      tickFormatter={(value) =>
+                        new Intl.NumberFormat("en-US", {
+                          notation: "compact",
+                          compactDisplay: "short",
+                        }).format(value)
+                      }
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    {companyNames.map((companyName, index) => (
+                      <Line
+                        key={companyName}
+                        type="monotone"
+                        dataKey={companyName}
+                        stroke={COLORS[index % COLORS.length]}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
           <VoucherCompanyDistributionChart

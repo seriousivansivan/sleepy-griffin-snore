@@ -55,42 +55,28 @@ export const SupabaseAuthProvider = ({
   };
 
   useEffect(() => {
-    // This function handles the initial session check and sets up the listener.
-    const initializeSession = async () => {
-      // 1. Proactively get the current session from Supabase.
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
-      setSession(currentSession);
-
-      // 2. Fetch the user's profile based on this session.
-      await fetchProfile(currentSession);
-
-      // 3. The initial check is complete, so we can stop the loading state.
-      setLoading(false);
-    };
-
-    // Run the initialization.
-    initializeSession();
-
-    // 4. Set up a listener for any future changes in authentication state.
+    // This logic is now simplified to rely solely on onAuthStateChange,
+    // which is more robust for handling the initial session, especially in new tabs.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       await fetchProfile(session);
+      setLoading(false);
     });
 
-    // 5. The cleanup function will unsubscribe from the listener when the component unmounts.
+    // The cleanup function will unsubscribe from the listener when the component unmounts.
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
   const refreshProfile = async () => {
+    // Get the latest session data before fetching the profile to ensure consistency.
     const {
       data: { session: currentSession },
     } = await supabase.auth.getSession();
+    setSession(currentSession);
     await fetchProfile(currentSession);
   };
 

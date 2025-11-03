@@ -1,0 +1,22 @@
+{
+  "name": "Petty Cash Voucher System",
+  "short_name": "Voucher App",
+  "description": "Streamline your petty cash voucher management.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/siLogo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/siLogo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

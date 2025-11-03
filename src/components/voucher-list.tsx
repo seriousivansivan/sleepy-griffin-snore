@@ -34,6 +34,7 @@ import {
   PaginationPrevious,
   PaginationLink,
 } from "@/components/ui/pagination";
+import { useSupabaseAuth } from "./providers/supabase-auth-provider"; // Import useSupabaseAuth
 
 // Define the types for the new voucher structure
 type VoucherItem = {
@@ -77,6 +78,8 @@ export function VoucherList({
   showCreator = true, // Default to true (visible)
   showActions = true, // Default to true (visible)
 }: VoucherListProps) {
+  const { session } = useSupabaseAuth(); // Get the current session
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -226,65 +229,72 @@ export function VoucherList({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentVouchers.map((voucher) => (
-                      <TableRow key={voucher.id}>
-                        {showCreator && (
-                          <TableCell className="font-medium">
-                            {voucher.user?.user_name || "N/A"}
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          <Badge variant="outline">
-                            {voucher.companies?.name || "N/A"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {voucher.details?.payTo || "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(
-                            voucher.details?.date || voucher.created_at
+                    {currentVouchers.map((voucher) => {
+                      // Construct the print URL with the access token
+                      const printHref = session?.access_token
+                        ? `/dashboard/voucher/${voucher.id}/print?token=${session.access_token}`
+                        : `/dashboard/voucher/${voucher.id}/print`;
+
+                      return (
+                        <TableRow key={voucher.id}>
+                          {showCreator && (
+                            <TableCell className="font-medium">
+                              {voucher.user?.user_name || "N/A"}
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Tooltip>
-                            <TooltipTrigger className="truncate max-w-[200px] text-left block">
-                              {getParticularsPreview(voucher.details?.items)}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <ul className="list-disc pl-4">
-                                {voucher.details?.items?.map((item, index) => (
-                                  <li key={index}>{item.particulars}</li>
-                                ))}
-                              </ul>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(voucher.total_amount)}
-                        </TableCell>
-                        {showActions && (
-                          <TableCell className="text-right">
+                          <TableCell>
+                            <Badge variant="outline">
+                              {voucher.companies?.name || "N/A"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {voucher.details?.payTo || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {formatDate(
+                              voucher.details?.date || voucher.created_at
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" asChild>
-                                  <Link
-                                    href={`/dashboard/voucher/${voucher.id}/print`}
-                                    target="_blank"
-                                  >
-                                    <Printer className="h-4 w-4" />
-                                    <span className="sr-only">Print Voucher</span>
-                                  </Link>
-                                </Button>
+                              <TooltipTrigger className="truncate max-w-[200px] text-left block">
+                                {getParticularsPreview(voucher.details?.items)}
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Print Voucher</p>
+                                <ul className="list-disc pl-4">
+                                  {voucher.details?.items?.map((item, index) => (
+                                    <li key={index}>{item.particulars}</li>
+                                  ))}
+                                </ul>
                               </TooltipContent>
                             </Tooltip>
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(voucher.total_amount)}
+                          </TableCell>
+                          {showActions && (
+                            <TableCell className="text-right">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" asChild>
+                                    <Link
+                                      href={printHref}
+                                      target="_blank"
+                                    >
+                                      <Printer className="h-4 w-4" />
+                                      <span className="sr-only">Print Voucher</span>
+                                    </Link>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Print Voucher</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

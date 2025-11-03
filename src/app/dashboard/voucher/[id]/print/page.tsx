@@ -1,44 +1,89 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { PrintableVoucher } from "@/components/printable-voucher";
 import { Voucher } from "@/components/voucher-list";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@supabase/supabase-js";
+
+// Create a temporary, non-session-persisting client for this page
+// This client will be initialized with the token from the URL
+const createTempSupabaseClient = (token: string) => {
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    throw new Error("Supabase environment variables are missing.");
+  }
+
+  // We use a standard client here, but we set the auth header manually via the token
+  // This client does not rely on sessionStorage or localStorage.
+  return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+    auth: {
+      persistSession: false, // Crucial: Do not try to save session
+    }
+  });
+};
+
 
 export default function PrintVoucherPage() {
   const params = useParams();
-  const { supabase, session, loading: authLoading } = useSupabaseAuth(); // Use the loading state from the auth provider
+  const searchParams = useSearchParams();
+  const { supabase: mainSupabase, session: mainSession, loading: authLoading } = useSupabaseAuth();
+  
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVoucher = async () => {
-      // Wait until the auth provider is done loading
-      if (authLoading) {
-        return;
-      }
-
-      // If auth is done and there's no session, show an error
-      if (!session) {
-        setError("You must be logged in to view this voucher.");
-        setLoading(false);
-        return;
-      }
-
-      if (!params.id) {
+      const voucherId = params.id;
+      const token = searchParams.get("token");
+      
+      if (!voucherId) {
         setError("Voucher ID is missing.");
         setLoading(false);
         return;
       }
 
+      let client = mainSupabase;
+      let isAuthenticated = !!mainSession;
+
+      // If we are in a new tab and the main session is not yet loaded,
+      // but we have a token in the URL, use a temporary client.
+      if (!isAuthenticated && token) {
+        try {
+          client = createTempSupabaseClient(token);
+          isAuthenticated = true; // Assume token is valid for the fetch
+        } catch (e) {
+          console.error("Failed to create temporary client:", e);
+          setError("Authentication failed during print setup.");
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // If still not authenticated (no main session and no token), show error
+      if (!isAuthenticated) {
+        setError("You must be logged in to view this voucher.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Use the determined client (main or temporary)
+      const { data, error } = await client
         .from("vouchers")
         .select("*, companies(name, logo_url)")
-        .eq("id", params.id)
+        .eq("id", voucherId)
         .single();
 
       if (error) {
@@ -54,8 +99,9 @@ export default function PrintVoucherPage() {
       setLoading(false);
     };
 
+    // We don't need to wait for authLoading here, as we handle authentication via token if needed.
     fetchVoucher();
-  }, [params.id, session, supabase, authLoading]); // Add authLoading to the dependency array
+  }, [params.id, searchParams, mainSupabase, mainSession]);
 
   useEffect(() => {
     if (voucher && !loading && !error) {
@@ -66,7 +112,7 @@ export default function PrintVoucherPage() {
     }
   }, [voucher, loading, error]);
 
-  if (loading || authLoading) { // Show loading indicator while auth is pending
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-muted">
         <p>Loading voucher for printing...</p>

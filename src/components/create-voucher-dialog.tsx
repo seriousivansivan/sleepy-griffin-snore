@@ -54,7 +54,10 @@ const formSchema = z.object({
     .string()
     .min(2, { message: "Payee name must be at least 2 characters." }),
   date: z.date({ required_error: "A date is required." }),
-  items: z.array(itemSchema).min(1, "At least one item is required."),
+  items: z
+    .array(itemSchema)
+    .min(1, "At least one item is required.")
+    .max(6, "You can add a maximum of 6 items."),
 });
 
 type Company = {
@@ -314,10 +317,16 @@ export function CreateVoucherDialog({
                 size="sm"
                 className="mt-2"
                 onClick={() => append({ particulars: "", amount: 0 })}
+                disabled={fields.length >= 6}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Item
               </Button>
+              {form.formState.errors.items?.message && (
+                <p className="text-sm font-medium text-destructive mt-2">
+                  {form.formState.errors.items.message}
+                </p>
+              )}
             </div>
 
             <div className="text-right font-bold text-lg">

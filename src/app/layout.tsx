@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SupabaseAuthProvider } from "@/components/providers/supabase-auth-provider";
@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   description: "Streamline your petty cash voucher management.",
   // Add PWA metadata for installability
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#000000",
 };
 

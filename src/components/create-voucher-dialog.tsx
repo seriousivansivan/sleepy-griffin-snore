@@ -166,7 +166,7 @@ export function CreateVoucherDialog({
       <DialogTrigger asChild>
         <Button>Create New Voucher</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create New Voucher</DialogTitle>
           <DialogDescription>
@@ -212,7 +212,7 @@ export function CreateVoucherDialog({
                     <FormLabel>Pay To</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Office Supplies Inc."
+                        placeholder="e.g. Ms.Nuengruetai Kramsri (K.Nueng)"
                         {...field}
                       />
                     </FormControl>

@@ -4,6 +4,7 @@ import "./globals.css";
 import { SupabaseAuthProvider } from "@/components/providers/supabase-auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Footer } from "@/components/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +44,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SupabaseAuthProvider>
-            {children}
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-grow">{children}</main>
+              <Footer />
+            </div>
             <Toaster />
           </SupabaseAuthProvider>
         </ThemeProvider>

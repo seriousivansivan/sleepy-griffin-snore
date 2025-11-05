@@ -42,6 +42,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { toast } from "sonner";
 import { ScrollArea } from "./ui/scroll-area";
+import { Combobox } from "@/components/ui/combobox";
 
 const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
@@ -68,6 +69,17 @@ type Company = {
 type CreateVoucherDialogProps = {
   onVoucherCreated: () => void;
 };
+
+const bossOptions = [
+  {
+    value: "Ms.Nuengruetai Kramsri (K.Nueng)",
+    label: "Ms.Nuengruetai Kramsri (K.Nueng)",
+  },
+  {
+    value: "Ms.Premwadee Kitcharoenka (K.Aor)",
+    label: "Ms.Premwadee Kitcharoenka (K.Aor)",
+  },
+];
 
 export function CreateVoucherDialog({
   onVoucherCreated,
@@ -211,9 +223,13 @@ export function CreateVoucherDialog({
                   <FormItem>
                     <FormLabel>Pay To</FormLabel>
                     <FormControl>
-                      <Input
+                      <Combobox
+                        options={bossOptions}
+                        value={field.value}
+                        onChange={field.onChange}
                         placeholder="e.g. Ms.Nuengruetai Kramsri (K.Nueng)"
-                        {...field}
+                        searchPlaceholder="Search or type name..."
+                        emptyMessage="No results. You can type a custom name."
                       />
                     </FormControl>
                     <FormMessage />
@@ -265,10 +281,7 @@ export function CreateVoucherDialog({
               <ScrollArea className="h-[200px] mt-2 p-1 border rounded-md">
                 <div className="space-y-3 pr-4">
                   {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="flex items-start gap-2"
-                    >
+                    <div key={field.id} className="flex items-start gap-2">
                       <FormField
                         control={form.control}
                         name={`items.${index}.particulars`}

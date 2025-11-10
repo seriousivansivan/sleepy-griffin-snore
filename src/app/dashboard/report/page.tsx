@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 import { toast } from "sonner";
 import { PrintableReport } from "@/components/report/printable-report";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,9 +58,12 @@ export default function ReportPage() {
         }
       }
 
+      // Fetch payees only from the current user's vouchers
       const { data: voucherData, error: voucherError } = await supabase
         .from("vouchers")
-        .select("details->>payTo");
+        .select("details->>payTo")
+        .eq("user_id", profile.id);
+
       if (voucherError) throw voucherError;
       if (voucherData) {
         const uniqueNames = [
@@ -81,22 +84,50 @@ export default function ReportPage() {
   }, [fetchDropdownData]);
 
   const generateReport = async () => {
-    if (!selectedCompanyId || !dateRange?.from || !dateRange?.to) {
+    if (!profile || !selectedCompanyId || !dateRange?.from || !dateRange?.to) {
       toast.warning("Please select a company and a valid date range.");
       return;
     }
     setIsLoading(true);
     setReportData(null);
     try {
-      const { data, error } = await supabase.rpc("get_petty_cash_log", {
-        p_company_id: selectedCompanyId,
-        p_start_date: dateRange.from.toISOString(),
-        p_end_date: dateRange.to.toISOString(),
-        p_approved_by: selectedPerson || null,
-      });
+      const { from, to } = dateRange;
+      let query = supabase
+        .from("vouchers")
+        .select("id, details, created_at")
+        .eq("user_id", profile.id)
+        .eq("company_id", selectedCompanyId)
+        .gte("details->>date", format(from, "yyyy-MM-dd"))
+        .lte("details->>date", format(to, "yyyy-MM-dd"))
+        .order("details->>date", { ascending: true });
+
+      if (selectedPerson) {
+        query = query.eq("details->>payTo", selectedPerson);
+      }
+
+      const { data: vouchers, error } = await query;
 
       if (error) throw error;
-      setReportData(data);
+
+      // Transform the data to match the report format by unnesting items
+      const formattedReportData = vouchers.flatMap((voucher) => {
+        const details = voucher.details as {
+          date: string;
+          payTo: string;
+          items: { particulars: string; amount: number }[];
+        };
+        if (!details || !details.items) return [];
+
+        return details.items.map((item) => ({
+          voucher_id: voucher.id,
+          voucher_date: details.date || voucher.created_at,
+          particulars: item.particulars,
+          approved_by: details.payTo,
+          amount: item.amount,
+        }));
+      });
+
+      setReportData(formattedReportData);
     } catch (error) {
       toast.error("Failed to generate report.");
       console.error(error);

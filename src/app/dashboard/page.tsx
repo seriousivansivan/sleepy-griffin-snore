@@ -123,6 +123,14 @@ export default function DashboardPage() {
                 </Link>
               </Button>
             )}
+            {profile.role === "moderator" && (
+              <Button variant="outline" asChild>
+                <Link href="/moderator/dashboard">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Moderator Panel
+                </Link>
+              </Button>
+            )}
             <CreateVoucherDialog onVoucherCreated={fetchVouchers} />
             <ThemeToggle />
             <UserNav />

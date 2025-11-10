@@ -113,7 +113,7 @@ export const PrintableReport = ({
       </section>
 
       <footer className="mt-auto pt-8 text-sm">
-        <div className="space-y-1">
+        <div className="border border-black bg-gray-200 p-4 text-center">
           <p>
             Please make cheque payment to{" "}
             <span className="font-semibold">{personResponsible}</span>
@@ -125,21 +125,6 @@ export const PrintableReport = ({
               <span className="font-semibold">{bankAccount}</span>
             </p>
           )}
-        </div>
-
-        <div className="grid grid-cols-3 gap-8 mt-16">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full border-b border-black h-5 mb-1"></div>
-            <p className="pt-1 font-bold">Prepared by</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full border-b border-black h-5 mb-1"></div>
-            <p className="pt-1 font-bold">Checked by</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full border-b border-black h-5 mb-1"></div>
-            <p className="pt-1 font-bold">Approved by</p>
-          </div>
         </div>
       </footer>
     </div>

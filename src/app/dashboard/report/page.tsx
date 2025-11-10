@@ -10,7 +10,7 @@ import { subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 import { toast } from "sonner";
 import { PrintableReport } from "@/components/report/printable-report";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer } from "lucide-react";
+import { Printer, ArrowLeft } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
 import {
   Select,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Link from "next/link";
 
 type Company = { id: string; name: string };
 type ReportData = any[];
@@ -144,9 +145,17 @@ export default function ReportPage() {
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
       <div className="no-print">
-        <h1 className="text-3xl font-bold text-foreground mb-8">
-          Generate Report
-        </h1>
+        <div className="flex items-center mb-8">
+          <Button variant="ghost" asChild className="mr-4">
+            <Link href="/dashboard">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to Dashboard
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold text-foreground">
+            Generate Report
+          </h1>
+        </div>
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Report Filters</CardTitle>

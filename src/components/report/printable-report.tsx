@@ -15,6 +15,8 @@ type PrintableReportProps = {
   companyName: string;
   dateRange: { from: Date; to: Date };
   personResponsible: string;
+  bankName?: string;
+  bankAccount?: string;
 };
 
 export const PrintableReport = ({
@@ -22,6 +24,8 @@ export const PrintableReport = ({
   companyName,
   dateRange,
   personResponsible,
+  bankName,
+  bankAccount,
 }: PrintableReportProps) => {
   const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
 
@@ -34,7 +38,7 @@ export const PrintableReport = ({
   };
 
   return (
-    <div className="bg-white text-black p-4 font-sans w-full max-w-4xl mx-auto text-sm print:text-[10pt] print:p-0 print:max-w-full print:shadow-none print:border-none">
+    <div className="bg-white text-black p-4 font-sans w-full max-w-4xl mx-auto text-sm print:text-[10pt] print:p-0 print:max-w-full print:shadow-none print:border-none flex flex-col h-full">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-center mb-4">Petty Cash Log</h1>
         <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
@@ -50,7 +54,7 @@ export const PrintableReport = ({
         </div>
       </header>
 
-      <section>
+      <section className="flex-grow">
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr className="bg-gray-200">
@@ -107,6 +111,37 @@ export const PrintableReport = ({
           </tfoot>
         </table>
       </section>
+
+      <footer className="mt-auto pt-8 text-sm">
+        <div className="space-y-1">
+          <p>
+            Please make cheque payment to{" "}
+            <span className="font-semibold">{personResponsible}</span>
+          </p>
+          {bankName && bankAccount && (
+            <p>
+              Or Deposit into bank name{" "}
+              <span className="font-semibold">{bankName}</span> Account No.{" "}
+              <span className="font-semibold">{bankAccount}</span>
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-8 mt-16">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-full border-b border-black h-5 mb-1"></div>
+            <p className="pt-1 font-bold">Prepared by</p>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="w-full border-b border-black h-5 mb-1"></div>
+            <p className="pt-1 font-bold">Checked by</p>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="w-full border-b border-black h-5 mb-1"></div>
+            <p className="pt-1 font-bold">Approved by</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

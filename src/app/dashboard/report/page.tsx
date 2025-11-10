@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 type Company = { id: string; name: string };
 type ReportData = any[];
@@ -39,6 +41,8 @@ export default function ReportPage() {
     from: startOfMonth(subMonths(new Date(), 1)),
     to: endOfMonth(subMonths(new Date(), 1)),
   });
+  const [bankName, setBankName] = useState<string>("");
+  const [bankAccount, setBankAccount] = useState<string>("");
 
   const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
 
@@ -162,56 +166,89 @@ export default function ReportPage() {
           </CardHeader>
           <CardContent>
             {isInitialLoading ? (
-              <div className="flex flex-wrap gap-4">
-                <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-10 w-[300px]" />
-                <Skeleton className="h-10 w-40" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4">
-                <Select
-                  value={selectedCompanyId}
-                  onValueChange={setSelectedCompanyId}
-                >
-                  <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
-                    <SelectValue placeholder="Select Company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Combobox
-                  options={responsiblePeopleOptions}
-                  value={selectedPerson}
-                  onChange={setSelectedPerson}
-                  placeholder="Filter by Payee..."
-                  searchPlaceholder="Search or type name..."
-                  emptyMessage="No results. You can type a custom name."
-                  className="w-full sm:w-auto min-w-[220px]"
-                />
-                <DatePickerWithRange
-                  date={dateRange}
-                  onDateChange={setDateRange}
-                />
-                <Button onClick={generateReport} disabled={isLoading}>
-                  {isLoading ? "Generating..." : "Generate Report"}
-                </Button>
-                {reportData && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.print()}
-                    className="ml-auto"
-                  >
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label>Company Name</Label>
+                    <Select
+                      value={selectedCompanyId}
+                      onValueChange={setSelectedCompanyId}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Company" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Person Responsible</Label>
+                    <Combobox
+                      options={responsiblePeopleOptions}
+                      value={selectedPerson}
+                      onChange={setSelectedPerson}
+                      placeholder="Filter by Payee..."
+                      searchPlaceholder="Search or type name..."
+                      emptyMessage="No results. You can type a custom name."
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Range of the Date</Label>
+                    <DatePickerWithRange
+                      date={dateRange}
+                      onDateChange={setDateRange}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bankName">Bank Name</Label>
+                    <Input
+                      id="bankName"
+                      placeholder="e.g. Kasikorn Bank"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bankAccount">Bank Account</Label>
+                    <Input
+                      id="bankAccount"
+                      placeholder="e.g. 123-4-56789-0"
+                      value={bankAccount}
+                      onChange={(e) => setBankAccount(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-6">
+                  <Button onClick={generateReport} disabled={isLoading}>
+                    {isLoading ? "Generating..." : "Generate Report"}
                   </Button>
-                )}
-              </div>
+                  {reportData && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.print()}
+                      className="ml-auto"
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Print
+                    </Button>
+                  )}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -233,6 +270,8 @@ export default function ReportPage() {
             companyName={selectedCompany.name}
             dateRange={{ from: dateRange.from, to: dateRange.to }}
             personResponsible={selectedPerson || "All Payees"}
+            bankName={bankName}
+            bankAccount={bankAccount}
           />
         )}
     </div>

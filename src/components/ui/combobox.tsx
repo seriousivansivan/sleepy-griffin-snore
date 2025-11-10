@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import * as React from "react"
+import { Check, ChevronsUpDown } from "lucide-react"
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -12,115 +12,102 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/components/ui/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"
+import { Input } from "./input"
+import { ScrollArea } from "./scroll-area"
 
-export interface ComboboxOption {
-  value: string;
-  label: string;
+type ComboboxOption = {
+  value: string
+  label: string
 }
 
 interface ComboboxProps {
-  options: ComboboxOption[];
-  value?: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  searchPlaceholder?: string;
-  emptyMessage?: string;
-  className?: string;
+  options: ComboboxOption[]
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  searchPlaceholder?: string
+  emptyMessage?: string
+  className?: string
 }
 
 export function Combobox({
   options,
   value,
   onChange,
-  placeholder = "Select...",
+  placeholder = "Select an option...",
   searchPlaceholder = "Search...",
-  emptyMessage = "No results found.",
+  emptyMessage = "No options found.",
   className,
 }: ComboboxProps) {
-  const [open, setOpen] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState(value || "");
-
-  // When the popover opens, sync the input value with the form value
-  React.useEffect(() => {
-    if (open) {
-      setInputValue(value || "");
-    }
-  }, [open, value]);
+  const [open, setOpen] = React.useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
 
   const handleSelect = (selectedValue: string) => {
-    onChange(selectedValue);
-    setInputValue(selectedValue);
-    setOpen(false);
-  };
-
-  // When popover closes, if the input value is different from the form value,
-  // it means the user typed something without selecting. We should commit this value.
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      if (inputValue !== value) {
-        onChange(inputValue);
-      }
-    }
-    setOpen(isOpen);
-  };
-
-  const displayValue =
-    options.find((option) => option.value === value)?.label || value;
+    onChange(selectedValue)
+    setOpen(false)
+    inputRef.current?.blur()
+  }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            "w-full justify-between font-normal",
-            !value && "text-muted-foreground",
-            className
-          )}
-        >
-          <span className="truncate">{displayValue || placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className={cn("relative", className)}>
+        <PopoverTrigger asChild>
+          <div className="relative w-full">
+            <Input
+              ref={inputRef}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onFocus={() => setOpen(true)}
+              placeholder={placeholder}
+              className="pr-10"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute inset-y-0 right-0 h-full w-10"
+              onClick={() => setOpen((prev) => !prev)}
+            >
+              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </div>
+        </PopoverTrigger>
+      </div>
+      <PopoverContent className="p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}
-            value={inputValue}
-            onValueChange={setInputValue}
           />
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.label} // Use label for filtering/display in cmdk
-                  onSelect={() => {
-                    handleSelect(option.value);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            <ScrollArea className="h-48">
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.label}
+                    onSelect={() => handleSelect(option.value)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </ScrollArea>
           </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
-  );
+  )
 }

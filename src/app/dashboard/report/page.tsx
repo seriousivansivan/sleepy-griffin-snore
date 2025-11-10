@@ -3,13 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
@@ -18,29 +11,28 @@ import { toast } from "sonner";
 import { PrintableReport } from "@/components/report/printable-report";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
 
 type Company = { id: string; name: string };
-type User = { id: string; user_name: string | null };
 type ReportData = any[];
 
 export default function ReportPage() {
   const { supabase, profile } = useSupabaseAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [responsiblePeople, setResponsiblePeople] = useState<string[]>([]);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Filter states
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedPerson, setSelectedPerson] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(subMonths(new Date(), 1)),
     to: endOfMonth(subMonths(new Date(), 1)),
   });
 
   const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
-  const selectedUser = users.find((u) => u.id === selectedUserId);
 
   const fetchDropdownData = useCallback(async () => {
     if (!profile) return;
@@ -59,14 +51,15 @@ export default function ReportPage() {
         }
       }
 
-      const { data: userData, error: userError } = await supabase
-        .from("profiles")
-        .select("id, user_name")
-        .order("user_name");
-      if (userError) throw userError;
-      setUsers(userData || []);
-      if (userData && userData.length > 0) {
-        setSelectedUserId(profile.id); // Default to current user
+      const { data: voucherData, error: voucherError } = await supabase
+        .from("vouchers")
+        .select("details->>payTo");
+      if (voucherError) throw voucherError;
+      if (voucherData) {
+        const uniqueNames = [
+          ...new Set(voucherData.map((v: any) => v.payTo).filter(Boolean)),
+        ];
+        setResponsiblePeople(uniqueNames.sort());
       }
     } catch (error) {
       toast.error("Failed to load filter options.");
@@ -92,6 +85,7 @@ export default function ReportPage() {
         p_company_id: selectedCompanyId,
         p_start_date: dateRange.from.toISOString(),
         p_end_date: dateRange.to.toISOString(),
+        p_approved_by: selectedPerson || null,
       });
 
       if (error) throw error;
@@ -103,6 +97,11 @@ export default function ReportPage() {
       setIsLoading(false);
     }
   };
+
+  const responsiblePeopleOptions = responsiblePeople.map((name) => ({
+    value: name,
+    label: name,
+  }));
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
@@ -139,18 +138,15 @@ export default function ReportPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
-                    <SelectValue placeholder="Person Responsible" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.user_name || "Unnamed User"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  options={responsiblePeopleOptions}
+                  value={selectedPerson}
+                  onChange={setSelectedPerson}
+                  placeholder="Filter by Payee..."
+                  searchPlaceholder="Search or type name..."
+                  emptyMessage="No results. You can type a custom name."
+                  className="w-full sm:w-auto min-w-[220px]"
+                />
                 <DatePickerWithRange
                   date={dateRange}
                   onDateChange={setDateRange}
@@ -181,14 +177,17 @@ export default function ReportPage() {
         </div>
       )}
 
-      {reportData && selectedCompany && selectedUser && dateRange?.from && dateRange.to && (
-        <PrintableReport
-          data={reportData}
-          companyName={selectedCompany.name}
-          dateRange={{ from: dateRange.from, to: dateRange.to }}
-          personResponsible={selectedUser.user_name || "N/A"}
-        />
-      )}
+      {reportData &&
+        selectedCompany &&
+        dateRange?.from &&
+        dateRange.to && (
+          <PrintableReport
+            data={reportData}
+            companyName={selectedCompany.name}
+            dateRange={{ from: dateRange.from, to: dateRange.to }}
+            personResponsible={profile?.user_name || "N/A"}
+          />
+        )}
     </div>
   );
 }

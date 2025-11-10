@@ -37,7 +37,7 @@ export const PrintableReport = ({
     <div className="bg-white text-black p-4 font-sans w-full max-w-4xl mx-auto text-sm print:text-[10pt] print:p-0 print:max-w-full print:shadow-none print:border-none">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-center mb-4">Petty Cash Log</h1>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+        <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
           <div className="font-semibold">Period:</div>
           <div>
             {format(dateRange.from, "dd MMMM yyyy")} to{" "}
@@ -54,19 +54,19 @@ export const PrintableReport = ({
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr className="bg-gray-200">
-              <th className="border border-black p-1.5 text-center font-bold w-[5%]">
+              <th className="border border-black py-2 px-1.5 text-center font-bold w-[5%]">
                 No.
               </th>
-              <th className="border border-black p-1.5 text-center font-bold w-[10%]">
+              <th className="border border-black py-2 px-1.5 text-center font-bold w-[10%]">
                 Date
               </th>
-              <th className="border border-black p-1.5 text-left font-bold w-[45%]">
+              <th className="border border-black py-2 px-1.5 text-left font-bold w-[45%]">
                 Particulars
               </th>
-              <th className="border border-black p-1.5 text-left font-bold w-[25%]">
+              <th className="border border-black py-2 px-1.5 text-left font-bold w-[25%]">
                 Approved by
               </th>
-              <th className="border border-black p-1.5 text-right font-bold w-[15%]">
+              <th className="border border-black py-2 px-1.5 text-right font-bold w-[15%]">
                 Amount
               </th>
             </tr>
@@ -74,15 +74,19 @@ export const PrintableReport = ({
           <tbody>
             {data.map((item, index) => (
               <tr key={`${item.voucher_id}-${index}`}>
-                <td className="border border-black p-1.5 text-center">
+                <td className="border border-black py-2 px-1.5 text-center">
                   {index + 1}
                 </td>
-                <td className="border border-black p-1.5 text-center">
+                <td className="border border-black py-2 px-1.5 text-center">
                   {format(new Date(item.voucher_date), "dd/MM/yyyy")}
                 </td>
-                <td className="border border-black p-1.5">{item.particulars}</td>
-                <td className="border border-black p-1.5">{item.approved_by}</td>
-                <td className="border border-black p-1.5 text-right">
+                <td className="border border-black py-2 px-1.5">
+                  {item.particulars}
+                </td>
+                <td className="border border-black py-2 px-1.5">
+                  {item.approved_by}
+                </td>
+                <td className="border border-black py-2 px-1.5 text-right">
                   {formatCurrency(item.amount)}
                 </td>
               </tr>
@@ -92,11 +96,11 @@ export const PrintableReport = ({
             <tr>
               <td
                 colSpan={4}
-                className="border border-black p-1.5 text-right font-bold"
+                className="border border-black py-2 px-1.5 text-right font-bold"
               >
                 Total
               </td>
-              <td className="border border-black p-1.5 text-right font-bold">
+              <td className="border border-black py-2 px-1.5 text-right font-bold">
                 {formatCurrency(totalAmount)}
               </td>
             </tr>

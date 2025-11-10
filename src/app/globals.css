@@ -168,12 +168,4 @@
   .no-print {
     display: none;
   }
-  @page {
-    size: A5 portrait;
-    margin: 1cm;
-  }
-  body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
 }

@@ -27,9 +27,9 @@ export const PrintableVoucher = ({ voucher }: PrintableVoucherProps) => {
   const companyName = voucher.companies?.name || "Company Name";
   const logoUrl = voucher.companies?.logo_url;
 
-  // Using a narrower container to better fit A5 paper size
+  // Using a wider container (e.g., A4 width equivalent for better screen viewing, but allowing print to expand)
   return (
-    <div className="bg-white text-black p-8 font-sans w-full max-w-lg mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0 print:max-w-full h-full">
+    <div className="bg-white text-black p-8 font-sans w-full max-w-4xl mx-auto border border-gray-300 shadow-lg print:shadow-none print:border-none flex flex-col text-sm print:text-[10pt] print:p-0 print:max-w-full h-full">
       {/* Header Section */}
       <header className="text-center mb-4">
         <div className="flex justify-center items-center h-16 mb-2">

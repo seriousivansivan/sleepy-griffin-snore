@@ -11,12 +11,17 @@ import type { Profile } from "@/components/providers/supabase-auth-provider";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
+export type ModeratorAssignment = {
+  managed_user_id: string;
+};
+
 export default function UserDetailPage() {
   const params = useParams();
   const userId = params.id as string;
   const { supabase } = useSupabaseAuth();
   const router = useRouter();
   const [user, setUser] = useState<Profile | null>(null);
+  const [assignments, setAssignments] = useState<ModeratorAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,21 +33,42 @@ export default function UserDetailPage() {
     }
 
     setIsLoading(true);
-    // Fetch user profile along with their company associations
-    const { data, error } = await supabase
+    // Fetch user profile and assignments in parallel
+    const userPromise = supabase
       .from("profiles")
       .select("*, user_companies(company_id)")
       .eq("id", userId)
       .single();
 
-    if (error) {
-      console.error("Failed to fetch user details:", error);
+    const assignmentsPromise = supabase
+      .from("moderator_assignments")
+      .select("managed_user_id")
+      .eq("moderator_id", userId);
+
+    const [userResult, assignmentsResult] = await Promise.all([
+      userPromise,
+      assignmentsPromise,
+    ]);
+
+    if (userResult.error) {
+      console.error("Failed to fetch user details:", userResult.error);
       setError("Could not load user details. The user may not exist.");
       setUser(null);
     } else {
-      setUser(data as Profile);
+      setUser(userResult.data as Profile);
       setError(null);
     }
+
+    if (assignmentsResult.error) {
+      toast.error("Could not load moderator assignments.");
+      console.error(
+        "Failed to fetch assignments:",
+        assignmentsResult.error
+      );
+    } else {
+      setAssignments(assignmentsResult.data as ModeratorAssignment[]);
+    }
+
     setIsLoading(false);
   }, [supabase, userId]);
 
@@ -95,7 +121,11 @@ export default function UserDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column: User Details & Settings (1/3 width) */}
         <div className="lg:col-span-1">
-          <UserDetailForm user={user} onUserUpdated={fetchUser} />
+          <UserDetailForm
+            user={user}
+            assignments={assignments}
+            onUserUpdated={fetchUser}
+          />
         </div>
 
         {/* Right Column: Activity Overview (2/3 width) */}

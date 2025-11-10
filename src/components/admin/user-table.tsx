@@ -42,7 +42,13 @@ export function UserTable({ users }: UserTableProps) {
               </TableCell>
               <TableCell>
                 <Badge
-                  variant={user.role === "admin" ? "default" : "secondary"}
+                  variant={
+                    user.role === "admin"
+                      ? "default"
+                      : user.role === "moderator"
+                      ? "outline"
+                      : "secondary"
+                  }
                 >
                   {user.role}
                 </Badge>

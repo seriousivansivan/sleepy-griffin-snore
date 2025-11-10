@@ -32,92 +32,93 @@ import { ChangePasswordDialog } from "./change-password-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserEmail } from "@/hooks/use-user-email";
 import { cn } from "@/lib/utils";
+import type { ModeratorAssignment } from "@/app/admin/users/[id]/page";
 
 const formSchema = z.object({
-  role: z.enum(["user", "admin"]),
+  role: z.enum(["user", "admin", "moderator"]),
   monthly_credit_allowance: z.coerce
     .number()
     .min(0, "Allowance cannot be negative."),
   has_unlimited_credit: z.boolean(),
-  // By removing .default([]), we force the schema to expect a required string[],
-  // which aligns with the type provided in defaultValues.
-  companyIds: z.array(z.string()), 
+  companyIds: z.array(z.string()),
+  managedUserIds: z.array(z.string()),
 });
 
-type Company = {
-  id: string;
-  name: string;
-};
+type Company = { id: string; name: string };
+type SelectableUser = { id: string; user_name: string | null };
 
 type UserDetailFormProps = {
   user: Profile;
+  assignments: ModeratorAssignment[];
   onUserUpdated: () => void;
 };
 
-export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
+export function UserDetailForm({
+  user,
+  assignments,
+  onUserUpdated,
+}: UserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
   const { email, isLoading: isEmailLoading } = useUserEmail(user.id);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
-  const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState<SelectableUser[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      role: user.role as "user" | "admin",
+      role: user.role as "user" | "admin" | "moderator",
       monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
-      // Ensure boolean is never null/undefined
       has_unlimited_credit: user.has_unlimited_credit ?? false,
-      // Ensure array is never null/undefined
       companyIds: user.user_companies?.map((uc) => uc.company_id) ?? [],
+      managedUserIds: assignments.map((a) => a.managed_user_id) ?? [],
     },
   });
 
+  const watchedRole = form.watch("role");
   const hasUnlimitedCredit = form.watch("has_unlimited_credit");
-  const watchedCompanyIds = form.watch("companyIds");
-
-  const isAllSelected =
-    allCompanies.length > 0 && watchedCompanyIds.length === allCompanies.length;
-  const isIndeterminate =
-    watchedCompanyIds.length > 0 &&
-    watchedCompanyIds.length < allCompanies.length;
 
   useEffect(() => {
-    const fetchAllCompanies = async () => {
-      setIsCompaniesLoading(true);
-      const { data, error } = await supabase
+    const fetchRelatedData = async () => {
+      setIsDataLoading(true);
+      const companyPromise = supabase
         .from("companies")
         .select("id, name")
         .order("name", { ascending: true });
 
-      if (error) {
-        toast.error("Failed to load all companies.");
-        console.error(error);
-      } else {
-        setAllCompanies(data || []);
-      }
-      setIsCompaniesLoading(false);
-    };
-    fetchAllCompanies();
-  }, [supabase]);
+      const userPromise = supabase
+        .from("profiles")
+        .select("id, user_name")
+        .eq("role", "user")
+        .order("user_name", { ascending: true });
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      form.setValue(
-        "companyIds",
-        allCompanies.map((c) => c.id),
-        { shouldValidate: true }
-      );
-    } else {
-      form.setValue("companyIds", [], { shouldValidate: true });
-    }
-  };
+      const [companyResult, userResult] = await Promise.all([
+        companyPromise,
+        userPromise,
+      ]);
+
+      if (companyResult.error) {
+        toast.error("Failed to load companies.");
+      } else {
+        setAllCompanies(companyResult.data || []);
+      }
+
+      if (userResult.error) {
+        toast.error("Failed to load users for assignment.");
+      } else {
+        setAllUsers(userResult.data || []);
+      }
+      setIsDataLoading(false);
+    };
+    fetchRelatedData();
+  }, [supabase]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-
     try {
+      // ... (profile update logic remains the same)
       const updateData: Partial<Profile> = {
         role: values.role,
         has_unlimited_credit: values.has_unlimited_credit,
@@ -143,34 +144,70 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
 
       if (profileError) throw profileError;
 
+      // ... (company assignment logic remains the same)
       const currentCompanyIds = user.user_companies.map((uc) => uc.company_id);
       const desiredCompanyIds = values.companyIds;
-
       const companiesToAdd = desiredCompanyIds.filter(
         (id) => !currentCompanyIds.includes(id)
       );
       const companiesToRemove = currentCompanyIds.filter(
         (id) => !desiredCompanyIds.includes(id)
       );
-
       if (companiesToAdd.length > 0) {
         const inserts = companiesToAdd.map((company_id) => ({
           user_id: user.id,
           company_id,
         }));
-        const { error: insertError } = await supabase
-          .from("user_companies")
-          .insert(inserts);
-        if (insertError) throw insertError;
+        const { error } = await supabase.from("user_companies").insert(inserts);
+        if (error) throw error;
       }
-
       if (companiesToRemove.length > 0) {
-        const { error: deleteError } = await supabase
+        const { error } = await supabase
           .from("user_companies")
           .delete()
           .eq("user_id", user.id)
           .in("company_id", companiesToRemove);
-        if (deleteError) throw deleteError;
+        if (error) throw error;
+      }
+
+      // Handle moderator assignments
+      if (values.role === "moderator") {
+        const currentManagedIds = assignments.map((a) => a.managed_user_id);
+        const desiredManagedIds = values.managedUserIds;
+
+        const usersToAdd = desiredManagedIds.filter(
+          (id) => !currentManagedIds.includes(id)
+        );
+        const usersToRemove = currentManagedIds.filter(
+          (id) => !desiredManagedIds.includes(id)
+        );
+
+        if (usersToAdd.length > 0) {
+          const inserts = usersToAdd.map((managed_user_id) => ({
+            moderator_id: user.id,
+            managed_user_id,
+          }));
+          const { error } = await supabase
+            .from("moderator_assignments")
+            .insert(inserts);
+          if (error) throw error;
+        }
+
+        if (usersToRemove.length > 0) {
+          const { error } = await supabase
+            .from("moderator_assignments")
+            .delete()
+            .eq("moderator_id", user.id)
+            .in("managed_user_id", usersToRemove);
+          if (error) throw error;
+        }
+      } else {
+        // If role is changed from moderator, remove all their assignments
+        const { error } = await supabase
+          .from("moderator_assignments")
+          .delete()
+          .eq("moderator_id", user.id);
+        if (error) throw error;
       }
 
       toast.success("User updated successfully.");
@@ -242,6 +279,7 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="moderator">Moderator</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -315,74 +353,39 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
               <FormField
                 control={form.control}
                 name="companyIds"
-                render={() => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Company Associations</FormLabel>
-                    <div className="flex flex-row items-start space-x-3 space-y-0 py-1 border-b pb-2">
-                      <Checkbox
-                        checked={isAllSelected}
-                        onCheckedChange={handleSelectAll}
-                        disabled={isCompaniesLoading || isSubmitting}
-                        {...(isIndeterminate && { indeterminate: "true" })}
-                      />
-                      <FormLabel className="font-semibold cursor-pointer">
-                        Select All ({watchedCompanyIds.length} /{" "}
-                        {allCompanies.length})
-                      </FormLabel>
-                    </div>
                     <ScrollArea className="h-[150px] border rounded-md p-4">
-                      {isCompaniesLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-full" />
-                        </div>
-                      ) : allCompanies.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No companies available to assign.
-                        </p>
+                      {isDataLoading ? (
+                        <Skeleton className="h-full w-full" />
                       ) : (
                         allCompanies.map((company) => (
-                          <FormField
+                          <FormItem
                             key={company.id}
-                            control={form.control}
-                            name="companyIds"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={company.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 py-1"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={
-                                        field.value?.includes(company.id) ??
-                                        false
-                                      }
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        return checked
-                                          ? field.onChange([
-                                              ...currentValue,
-                                              company.id,
-                                            ])
-                                          : field.onChange(
-                                              currentValue.filter(
-                                                (value) =>
-                                                  value !== company.id
-                                              )
-                                            );
-                                      }}
-                                      disabled={isSubmitting}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal cursor-pointer">
-                                    {company.name}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
+                            className="flex flex-row items-start space-x-3 space-y-0 py-1"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(company.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...field.value,
+                                        company.id,
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== company.id
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              {company.name}
+                            </FormLabel>
+                          </FormItem>
                         ))
                       )}
                     </ScrollArea>
@@ -391,8 +394,56 @@ export function UserDetailForm({ user, onUserUpdated }: UserDetailFormProps) {
                 )}
               />
 
+              {watchedRole === "moderator" && (
+                <FormField
+                  control={form.control}
+                  name="managedUserIds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Managed Users</FormLabel>
+                      <ScrollArea className="h-[150px] border rounded-md p-4">
+                        {isDataLoading ? (
+                          <Skeleton className="h-full w-full" />
+                        ) : (
+                          allUsers.map((managedUser) => (
+                            <FormItem
+                              key={managedUser.id}
+                              className="flex flex-row items-start space-x-3 space-y-0 py-1"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(
+                                    managedUser.id
+                                  )}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([
+                                          ...field.value,
+                                          managedUser.id,
+                                        ])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== managedUser.id
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {managedUser.user_name || "Unnamed User"}
+                              </FormLabel>
+                            </FormItem>
+                          ))
+                        )}
+                      </ScrollArea>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || isDataLoading}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

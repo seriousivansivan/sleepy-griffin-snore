@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { useRouter } from "next/navigation";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, FileText } from "lucide-react";
 import Link from "next/link";
 
 export function UserNav() {
@@ -60,6 +60,12 @@ export function UserNav() {
           <Link href="/dashboard/profile">
             <User className="mr-2 h-4 w-4" />
             <span>My Profile</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/report">
+            <FileText className="mr-2 h-4 w-4" />
+            <span>Report</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleLogout}>

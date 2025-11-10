@@ -13,7 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { toast } from "sonner";
 import type { Profile } from "@/components/providers/supabase-auth-provider";
@@ -22,14 +21,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUserEmail } from "@/hooks/use-user-email";
 import { cn } from "@/lib/utils";
 
+// Schema now only includes fields a moderator can edit
 const formSchema = z.object({
-  monthly_credit_allowance: z.coerce
-    .number()
-    .min(0, "Allowance cannot be negative."),
-  has_unlimited_credit: z.boolean(),
   companyIds: z.array(z.string()),
 });
 
@@ -45,7 +40,6 @@ export function ModeratorUserDetailForm({
   onUserUpdated,
 }: ModeratorUserDetailFormProps) {
   const { supabase } = useSupabaseAuth();
-  const { email, isLoading: isEmailLoading } = useUserEmail(user.id);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,13 +47,9 @@ export function ModeratorUserDetailForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      monthly_credit_allowance: user.monthly_credit_allowance ?? 0,
-      has_unlimited_credit: user.has_unlimited_credit ?? false,
       companyIds: user.user_companies?.map((uc) => uc.company_id) ?? [],
     },
   });
-
-  const hasUnlimitedCredit = form.watch("has_unlimited_credit");
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -82,30 +72,7 @@ export function ModeratorUserDetailForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      const updateData: Partial<Profile> = {
-        has_unlimited_credit: values.has_unlimited_credit,
-      };
-
-      if (values.has_unlimited_credit) {
-        updateData.monthly_credit_allowance = 0;
-        updateData.credit = 0;
-      } else {
-        updateData.monthly_credit_allowance = values.monthly_credit_allowance;
-        if (
-          user.has_unlimited_credit ||
-          values.monthly_credit_allowance > (user.monthly_credit_allowance ?? 0)
-        ) {
-          updateData.credit = values.monthly_credit_allowance;
-        }
-      }
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update(updateData)
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
+      // Moderator can only update company associations
       const currentCompanyIds = user.user_companies.map((uc) => uc.company_id);
       const desiredCompanyIds = values.companyIds;
       const companiesToAdd = desiredCompanyIds.filter(
@@ -133,7 +100,7 @@ export function ModeratorUserDetailForm({
         if (error) throw error;
       }
 
-      toast.success("User updated successfully.");
+      toast.success("User's company associations updated successfully.");
       onUserUpdated();
     } catch (error: any) {
       console.error("Error updating user:", error);
@@ -154,82 +121,47 @@ export function ModeratorUserDetailForm({
             <span className="font-semibold mr-1">Username:</span>{" "}
             {user.user_name || "N/A"}
           </div>
-          <div className="flex">
-            <span className="font-semibold mr-1">Email:</span>{" "}
-            <span className="text-muted-foreground">
-              {isEmailLoading ? (
-                <Skeleton className="h-4 w-48 inline-block" />
-              ) : (
-                email || "N/A"
+        </div>
+
+        {/* Read-only credit information */}
+        <div className="space-y-4 border p-4 rounded-md bg-muted text-sm">
+          <h3 className="font-semibold">Credit Information (Read-Only)</h3>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Monthly Allowance:</span>
+            <span className="font-medium">
+              {user.has_unlimited_credit
+                ? "Unlimited"
+                : (user.monthly_credit_allowance ?? 0).toLocaleString(
+                    undefined,
+                    {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }
+                  )}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Remaining Credit:</span>
+            <span
+              className={cn(
+                "font-medium",
+                !user.has_unlimited_credit &&
+                  (user.credit ?? 0) < 0 &&
+                  "text-destructive"
               )}
+            >
+              {user.has_unlimited_credit
+                ? "Unlimited"
+                : (user.credit ?? 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
             </span>
           </div>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4 border p-4 rounded-md bg-muted">
-              <h3 className="font-semibold">Credit Management</h3>
-              <FormField
-                control={form.control}
-                name="has_unlimited_credit"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={!!field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Grant Unlimited Credit</FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="monthly_credit_allowance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Monthly Credit Allowance</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="300.00"
-                        {...field}
-                        value={field.value === 0 ? "" : String(field.value)}
-                        disabled={hasUnlimitedCredit || isSubmitting}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value))
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <p className="text-xs text-muted-foreground">
-                Current Remaining Credit:{" "}
-                <span
-                  className={cn(
-                    "font-medium",
-                    !user.has_unlimited_credit &&
-                      (user.credit ?? 0) < 0 &&
-                      "text-destructive"
-                  )}
-                >
-                  {user.has_unlimited_credit
-                    ? "Unlimited"
-                    : (user.credit ?? 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                </span>
-              </p>
-            </div>
-
             <FormField
               control={form.control}
               name="companyIds"

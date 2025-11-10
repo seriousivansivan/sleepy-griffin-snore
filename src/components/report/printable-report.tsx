@@ -38,7 +38,7 @@ export const PrintableReport = ({
   };
 
   return (
-    <div className="bg-white text-black p-4 font-sans w-full max-w-4xl mx-auto text-sm print:text-[10pt] print:p-0 print:max-w-full print:shadow-none print:border-none flex flex-col h-full">
+    <div className="bg-white text-black p-4 font-sans w-full max-w-lg mx-auto text-sm print:text-[10pt] print:p-0 print:max-w-full print:shadow-none print:border-none flex flex-col h-full">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-center mb-4">Petty Cash Log</h1>
         <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">

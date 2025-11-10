@@ -35,13 +35,19 @@ export const PrintableReport = ({
 
   return (
     <div className="bg-white text-black p-4 font-sans w-full max-w-4xl mx-auto text-sm print:text-[10pt] print:p-0 print:max-w-full print:shadow-none print:border-none">
-      <header className="text-center mb-6">
-        <h1 className="text-xl font-bold">{companyName}</h1>
-        <h2 className="text-lg font-semibold">Petty Cash Log</h2>
-        <p className="text-sm">
-          For the period from {format(dateRange.from, "dd MMMM yyyy")} to{" "}
-          {format(dateRange.to, "dd MMMM yyyy")}
-        </p>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-center mb-4">Petty Cash Log</h1>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+          <div className="font-semibold">Period:</div>
+          <div>
+            {format(dateRange.from, "dd MMMM yyyy")} to{" "}
+            {format(dateRange.to, "dd MMMM yyyy")}
+          </div>
+          <div className="font-semibold">Person Responsible:</div>
+          <div>{personResponsible}</div>
+          <div className="font-semibold">Submit to:</div>
+          <div>{companyName}</div>
+        </div>
       </header>
 
       <section>
@@ -97,13 +103,6 @@ export const PrintableReport = ({
           </tfoot>
         </table>
       </section>
-
-      <footer className="mt-16">
-        <div className="w-1/3">
-          <div className="border-b border-black h-8"></div>
-          <p className="pt-1">Person Responsible: {personResponsible}</p>
-        </div>
-      </footer>
     </div>
   );
 };

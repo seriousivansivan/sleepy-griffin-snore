@@ -223,7 +223,7 @@ export default function ReportPage() {
             data={reportData}
             companyName={selectedCompany.name}
             dateRange={{ from: dateRange.from, to: dateRange.to }}
-            personResponsible={profile?.user_name || "N/A"}
+            personResponsible={selectedPerson || "All Payees"}
           />
         )}
     </div>

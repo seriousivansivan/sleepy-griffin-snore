@@ -163,18 +163,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Print-specific styles */
-@media print {
-  @page {
-    size: A4;
-    margin: 0.1in;
-  }
-  body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .no-print {
-    display: none !important;
-  }
-}

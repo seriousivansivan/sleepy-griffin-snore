@@ -60,7 +60,7 @@ export const PrintableReport = ({
               <th className="border border-black py-2 px-1.5 text-center font-bold w-[10%]">
                 Date
               </th>
-              <th className="border border-black py-2 px-1.5 text-left font-bold w-[45%]">
+              <th className="border border-black py-2 px-3 text-left font-bold w-[45%]">
                 Particulars
               </th>
               <th className="border border-black py-2 px-1.5 text-left font-bold w-[25%]">
@@ -80,7 +80,7 @@ export const PrintableReport = ({
                 <td className="border border-black py-2 px-1.5 text-center">
                   {format(new Date(item.voucher_date), "dd/MM/yyyy")}
                 </td>
-                <td className="border border-black py-2 px-1.5">
+                <td className="border border-black py-2 px-3">
                   {item.particulars}
                 </td>
                 <td className="border border-black py-2 px-1.5">

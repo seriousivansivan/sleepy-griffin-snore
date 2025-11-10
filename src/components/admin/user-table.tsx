@@ -16,12 +16,11 @@ import { cn } from "@/lib/utils";
 
 type UserTableProps = {
   users: Profile[];
-  onUserUpdated: () => void; // Kept for consistency, though updates happen on the detail page
+  onUserUpdated: () => void;
+  basePath: "/admin/users" | "/moderator/users";
 };
 
-export function UserTable({ users }: UserTableProps) {
-  // Removed editingUser state and EditUserDialog import/usage
-
+export function UserTable({ users, basePath }: UserTableProps) {
   return (
     <div className="border rounded-lg">
       <Table>
@@ -85,7 +84,7 @@ export function UserTable({ users }: UserTableProps) {
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/users/${user.id}`}>Edit Details</Link>
+                  <Link href={`${basePath}/${user.id}`}>Edit Details</Link>
                 </Button>
               </TableCell>
             </TableRow>

@@ -63,7 +63,11 @@ export default function ModeratorUserManagementPage() {
           <Skeleton className="h-12 w-full" />
         </div>
       ) : (
-        <UserTable users={filteredUsers} onUserUpdated={fetchUsers} />
+        <UserTable
+          users={filteredUsers}
+          onUserUpdated={fetchUsers}
+          basePath="/moderator/users"
+        />
       )}
     </div>
   );

@@ -32,6 +32,7 @@ export default function DashboardPage() {
   }, [session, loading, router, profile]);
 
   const fetchVouchers = useCallback(async () => {
+    if (!session) return; // Don't fetch if there's no session
     setVouchersLoading(true);
     try {
       const { data, error } = await supabase
@@ -41,6 +42,7 @@ export default function DashboardPage() {
           companies(*),
           user:profiles!user_id(id, user_name)
         `)
+        .eq('user_id', session.user.id) // Only fetch vouchers for the current user
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -53,7 +55,7 @@ export default function DashboardPage() {
     } finally {
       setVouchersLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, session]);
 
   useEffect(() => {
     if (!loading && profile) {

@@ -12,6 +12,13 @@ import { PrintableReport } from "@/components/report/printable-report";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Company = { id: string; name: string };
 type ReportData = any[];

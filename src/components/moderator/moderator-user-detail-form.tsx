@@ -16,11 +16,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { createClient } from "@/integrations/supabase/client";
+import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import type { Profile } from "@/components/providers/supabase-auth-provider";
 
 const formSchema = z.object({
   user_name: z.string().min(2, {
@@ -41,8 +42,14 @@ type Company = {
   name: string;
 };
 
-export function ModeratorUserDetailForm({ user, onUpdateSuccess }) {
-  const supabase = createClient();
+type ModeratorUserDetailFormProps = {
+  user: Profile;
+  onUserUpdated: () => void;
+};
+
+export function ModeratorUserDetailForm({ user, onUserUpdated }: ModeratorUserDetailFormProps) {
+  // Use the context hook to get the initialized client
+  const { supabase } = useSupabaseAuth(); 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +61,7 @@ export function ModeratorUserDetailForm({ user, onUpdateSuccess }) {
       credit: user?.credit || 0,
       monthly_credit_allowance: user?.monthly_credit_allowance || 0,
       has_unlimited_credit: user?.has_unlimited_credit || false,
-      companyIds: [],
+      companyIds: user?.user_companies?.map((uc) => uc.company_id) || [],
     },
   });
 
@@ -78,7 +85,16 @@ export function ModeratorUserDetailForm({ user, onUpdateSuccess }) {
         if (userCompaniesError) throw userCompaniesError;
 
         const userCompanyIds = userCompaniesData.map((uc) => uc.company_id);
-        form.setValue("companyIds", userCompanyIds);
+        
+        // Reset form values, ensuring companyIds are set from fetched data
+        form.reset({
+          user_name: user.user_name || "",
+          credit: user.credit || 0,
+          monthly_credit_allowance: user.monthly_credit_allowance || 0,
+          has_unlimited_credit: user.has_unlimited_credit || false,
+          companyIds: userCompanyIds,
+        });
+
       } catch (error) {
         toast.error("Failed to load initial data.");
         console.error("Error fetching data:", error);
@@ -89,13 +105,6 @@ export function ModeratorUserDetailForm({ user, onUpdateSuccess }) {
 
     if (user) {
       fetchData();
-      form.reset({
-        user_name: user.user_name || "",
-        credit: user.credit || 0,
-        monthly_credit_allowance: user.monthly_credit_allowance || 0,
-        has_unlimited_credit: user.has_unlimited_credit || false,
-        companyIds: form.getValues("companyIds"), // Keep fetched values
-      });
     }
   }, [user, form, supabase]);
 
@@ -169,12 +178,14 @@ export function ModeratorUserDetailForm({ user, onUpdateSuccess }) {
       }
 
       toast.success("User updated successfully!");
-      if (onUpdateSuccess) {
-        onUpdateSuccess();
+      if (onUserUpdated) {
+        onUserUpdated();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user:", error);
-      toast.error(`Failed to update user: ${error.message}`);
+      // Safely access the error message
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast.error(`Failed to update user: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

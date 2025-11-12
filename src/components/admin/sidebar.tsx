@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Settings, Building, Ticket } from "lucide-react";
+import { Home, Users, Settings, Building, Ticket, BarChartBig } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNavItems = [
@@ -10,6 +10,7 @@ const adminNavItems = [
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/companies", label: "Company Management", icon: Building },
   { href: "/admin/vouchers", label: "Voucher Overview", icon: Ticket },
+  { href: "/admin/summary", label: "Summary", icon: BarChartBig },
 ];
 
 export function AdminSidebar() {

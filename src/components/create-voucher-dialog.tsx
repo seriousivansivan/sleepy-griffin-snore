@@ -44,6 +44,16 @@ import { toast } from "sonner";
 import { ScrollArea } from "./ui/scroll-area";
 import { Combobox } from "@/components/ui/combobox";
 
+const categoryOptions = [
+  "Transportation",
+  "Office Supplies",
+  "Meals & Entertainment",
+  "Utilities",
+  "Marketing",
+  "Travel",
+  "Other",
+];
+
 const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
@@ -55,6 +65,7 @@ const formSchema = z.object({
     .string()
     .min(2, { message: "Payee name must be at least 2 characters." }),
   date: z.date({ required_error: "A date is required." }),
+  category: z.string({ required_error: "Please select a category." }),
   items: z
     .array(itemSchema)
     .min(1, "At least one item is required.")
@@ -149,6 +160,7 @@ export function CreateVoucherDialog({
           p_details: {
             payTo: values.payTo,
             date: format(values.date, "yyyy-MM-dd"),
+            category: values.category,
             items: values.items,
           },
         }
@@ -270,6 +282,33 @@ export function CreateVoucherDialog({
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categoryOptions.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -57,6 +57,7 @@ const categoryOptions = [
 const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
+  category: z.string({ required_error: "Please select a category." }),
 });
 
 const formSchema = z.object({
@@ -65,7 +66,6 @@ const formSchema = z.object({
     .string()
     .min(2, { message: "Payee name must be at least 2 characters." }),
   date: z.date({ required_error: "A date is required." }),
-  category: z.string({ required_error: "Please select a category." }),
   items: z
     .array(itemSchema)
     .min(1, "At least one item is required.")
@@ -105,7 +105,7 @@ export function CreateVoucherDialog({
     defaultValues: {
       payTo: "",
       date: new Date(),
-      items: [{ particulars: "", amount: 0 }],
+      items: [{ particulars: "", amount: 0, category: "" }],
     },
   });
 
@@ -160,7 +160,6 @@ export function CreateVoucherDialog({
           p_details: {
             payTo: values.payTo,
             date: format(values.date, "yyyy-MM-dd"),
-            category: values.category,
             items: values.items,
           },
         }
@@ -173,7 +172,12 @@ export function CreateVoucherDialog({
         await refreshProfile(); // Refresh profile to get updated credit
         onVoucherCreated();
         setIsOpen(false);
-        form.reset();
+        form.reset({
+          payTo: "",
+          date: new Date(),
+          items: [{ particulars: "", amount: 0, category: "" }],
+          companyId: values.companyId, // Keep company selected
+        });
       } else {
         toast.error(data.message || "An unknown error occurred.");
       }
@@ -286,33 +290,6 @@ export function CreateVoucherDialog({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <div>
@@ -320,15 +297,46 @@ export function CreateVoucherDialog({
               <ScrollArea className="h-[200px] mt-2 p-1 border rounded-md">
                 <div className="space-y-3 pr-4">
                   {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-start gap-2">
+                    <div
+                      key={field.id}
+                      className="grid grid-cols-[1fr_150px_150px_auto] items-start gap-2"
+                    >
                       <FormField
                         control={form.control}
                         name={`items.${index}.particulars`}
                         render={({ field }) => (
-                          <FormItem className="flex-1">
+                          <FormItem>
+                            {index === 0 && <FormLabel>Particulars</FormLabel>}
                             <FormControl>
-                              <Input placeholder="Particulars" {...field} />
+                              <Input placeholder="Expense description" {...field} />
                             </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.category`}
+                        render={({ field }) => (
+                          <FormItem>
+                            {index === 0 && <FormLabel>Category</FormLabel>}
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {categoryOptions.map((category) => (
+                                  <SelectItem key={category} value={category}>
+                                    {category}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -337,11 +345,12 @@ export function CreateVoucherDialog({
                         control={form.control}
                         name={`items.${index}.amount`}
                         render={({ field }) => (
-                          <FormItem className="w-32">
+                          <FormItem>
+                            {index === 0 && <FormLabel>Amount</FormLabel>}
                             <FormControl>
                               <Input
                                 type="number"
-                                placeholder="Amount"
+                                placeholder="0.00"
                                 {...field}
                               />
                             </FormControl>
@@ -355,7 +364,7 @@ export function CreateVoucherDialog({
                         size="icon"
                         onClick={() => remove(index)}
                         disabled={fields.length <= 1}
-                        className="mt-1"
+                        className={cn(index === 0 ? "mt-8" : "mt-1")}
                       >
                         <XCircle className="h-5 w-5 text-red-500" />
                       </Button>
@@ -368,7 +377,9 @@ export function CreateVoucherDialog({
                 variant="outline"
                 size="sm"
                 className="mt-2"
-                onClick={() => append({ particulars: "", amount: 0 })}
+                onClick={() =>
+                  append({ particulars: "", amount: 0, category: "" })
+                }
                 disabled={fields.length >= 6}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />

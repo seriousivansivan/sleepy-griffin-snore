@@ -57,7 +57,10 @@ export const PrintableSummary = ({
         <table className="w-full border-collapse border border-black">
           <thead>
             <tr className="bg-gray-200">
-              <th className="border border-black py-2 px-3 text-left font-bold w-[70%]">
+              <th className="border border-black py-2 px-1.5 text-center font-bold w-[10%]">
+                No.
+              </th>
+              <th className="border border-black py-2 px-3 text-left font-bold w-[60%]">
                 Category
               </th>
               <th className="border border-black py-2 px-1.5 text-right font-bold w-[30%]">
@@ -68,6 +71,9 @@ export const PrintableSummary = ({
           <tbody>
             {data.map((item, index) => (
               <tr key={index}>
+                <td className="border border-black py-2 px-1.5 text-center">
+                  {index + 1}
+                </td>
                 <td className="border border-black py-2 px-3">
                   {item.category}
                 </td>
@@ -79,7 +85,10 @@ export const PrintableSummary = ({
           </tbody>
           <tfoot>
             <tr>
-              <td className="border border-black py-2 px-3 text-right font-bold">
+              <td
+                colSpan={2}
+                className="border border-black py-2 px-3 text-right font-bold"
+              >
                 Grand Total
               </td>
               <td className="border border-black py-2 px-1.5 text-right font-bold">

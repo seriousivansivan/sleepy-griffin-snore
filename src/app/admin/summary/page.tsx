@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 
 type Company = { id: string; name: string };
 type SummaryData = { category: string; total_amount: number }[];
@@ -35,7 +36,8 @@ export default function SummaryPage() {
 
   // Filter states
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [selectedPayee, setSelectedPayee] = useState<string>("");
+  const [selectedPayees, setSelectedPayees] = useState<string[]>([]);
+  const [personResponsible, setPersonResponsible] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: new Date(),
@@ -91,7 +93,7 @@ export default function SummaryPage() {
           p_company_id: selectedCompanyId,
           p_start_date: formatISO(dateRange.from),
           p_end_date: formatISO(dateRange.to),
-          p_payee: selectedPayee || null,
+          p_payees: selectedPayees.length > 0 ? selectedPayees : null,
         }
       );
 
@@ -152,11 +154,21 @@ export default function SummaryPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Filter by Payee (Optional)</Label>
+                    <MultiSelectDropdown
+                      options={payees}
+                      selected={selectedPayees}
+                      onChange={setSelectedPayees}
+                      placeholder="All Payees"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Person Responsible</Label>
                     <Combobox
                       options={payeeOptions}
-                      value={selectedPayee}
-                      onChange={setSelectedPayee}
-                      placeholder="All Payees"
+                      value={personResponsible}
+                      onChange={setPersonResponsible}
+                      placeholder="Select responsible person..."
                       searchPlaceholder="Search or type name..."
                       emptyMessage="No results."
                       className="w-full"
@@ -225,7 +237,7 @@ export default function SummaryPage() {
             data={summaryData}
             companyName={selectedCompany.name}
             dateRange={{ from: dateRange.from, to: dateRange.to }}
-            personResponsible={selectedPayee || "All Payees"}
+            personResponsible={personResponsible || "All Selected Payees"}
             bankName={bankName}
             bankAccount={bankAccount}
           />

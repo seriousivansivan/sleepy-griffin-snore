@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
 const adminNavItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: Home },
   { href: "/admin/users", label: "User Management", icon: Users },
+  { href: "/admin/payees", label: "Payee Management", icon: Contact },
   { href: "/admin/companies", label: "Company Management", icon: Building },
   { href: "/admin/vouchers", label: "Voucher Overview", icon: Ticket },
   { href: "/admin/summary", label: "Summary", icon: BarChartBig },
-  { href: "/admin/payees", label: "Payee Management", icon: Contact },
 ];
 
 export function AdminSidebar() {

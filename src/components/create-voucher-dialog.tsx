@@ -51,6 +51,7 @@ const categoryOptions = [
   "Utilities",
   "Marketing",
   "Travel",
+  "Visa and WorkPermit",
   "Other",
 ];
 
@@ -77,20 +78,14 @@ type Company = {
   name: string;
 };
 
+type ComboboxOption = {
+  value: string;
+  label: string;
+};
+
 type CreateVoucherDialogProps = {
   onVoucherCreated: () => void;
 };
-
-const bossOptions = [
-  {
-    value: "Ms.Nuengruetai Kramsri (K.Nueng)",
-    label: "Ms.Nuengruetai Kramsri (K.Nueng)",
-  },
-  {
-    value: "Ms.Premwadee Kitcharoenka (K.Aor)",
-    label: "Ms.Premwadee Kitcharoenka (K.Aor)",
-  },
-];
 
 export function CreateVoucherDialog({
   onVoucherCreated,
@@ -99,6 +94,7 @@ export function CreateVoucherDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [payeeOptions, setPayeeOptions] = useState<ComboboxOption[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -125,20 +121,34 @@ export function CreateVoucherDialog({
   );
 
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchDropdownData = async () => {
       if (!session || !isOpen) return;
+
+      // Fetch companies
       const companyIds =
         profile?.user_companies.map((uc) => uc.company_id) || [];
-      if (companyIds.length === 0) return;
+      if (companyIds.length > 0) {
+        const { data: companyData, error: companyError } = await supabase
+          .from("companies")
+          .select("id, name")
+          .in("id", companyIds);
+        if (companyError) toast.error("Could not load your companies.");
+        else setCompanies(companyData || []);
+      }
 
-      const { data, error } = await supabase
-        .from("companies")
-        .select("id, name")
-        .in("id", companyIds);
-      if (error) toast.error("Could not load your companies.");
-      else setCompanies(data || []);
+      // Fetch payees
+      const { data: payeeData, error: payeeError } = await supabase
+        .from("payees")
+        .select("name")
+        .order("name");
+      if (payeeError) {
+        toast.error("Could not load payees.");
+      } else {
+        const options = payeeData.map((p) => ({ value: p.name, label: p.name }));
+        setPayeeOptions(options);
+      }
     };
-    fetchCompanies();
+    fetchDropdownData();
   }, [isOpen, session, supabase, profile]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -240,11 +250,11 @@ export function CreateVoucherDialog({
                     <FormLabel>Pay To</FormLabel>
                     <FormControl>
                       <Combobox
-                        options={bossOptions}
+                        options={payeeOptions}
                         value={field.value}
                         onChange={field.onChange}
-                        placeholder="e.g. Ms.Nuengruetai Kramsri (K.Nueng)"
-                        searchPlaceholder="Search or type name..."
+                        placeholder="Select or type a payee name..."
+                        searchPlaceholder="Search payee..."
                         emptyMessage="No results. You can type a custom name."
                       />
                     </FormControl>

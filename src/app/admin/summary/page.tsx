@@ -51,7 +51,7 @@ export default function SummaryPage() {
     try {
       const [companyRes, payeeRes] = await Promise.all([
         supabase.from("companies").select("id, name").order("name"),
-        supabase.from("vouchers").select("details->>payTo"),
+        supabase.from("payees").select("name").order("name"),
       ]);
 
       if (companyRes.error) throw companyRes.error;
@@ -62,10 +62,8 @@ export default function SummaryPage() {
 
       if (payeeRes.error) throw payeeRes.error;
       if (payeeRes.data) {
-        const uniqueNames = [
-          ...new Set(payeeRes.data.map((v: any) => v.payTo).filter(Boolean)),
-        ];
-        setPayees(uniqueNames.sort());
+        const payeeNames = payeeRes.data.map((p: { name: string }) => p.name);
+        setPayees(payeeNames);
       }
     } catch (error) {
       toast.error("Failed to load filter options.");

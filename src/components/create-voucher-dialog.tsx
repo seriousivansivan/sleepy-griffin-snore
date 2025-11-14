@@ -44,11 +44,21 @@ import { toast } from "sonner";
 import { ScrollArea } from "./ui/scroll-area";
 import { Combobox } from "@/components/ui/combobox";
 
+const categoryOptions = [
+  "Transportation",
+  "Office Supplies",
+  "Meals & Entertainment",
+  "Utilities",
+  "Marketing",
+  "Travel",
+  "Visa and WorkPermit",
+  "Other",
+];
+
 const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
-  mainCategory: z.string({ required_error: "Please select a main category." }),
-  subCategory: z.string({ required_error: "Please select a sub-category." }),
+  category: z.string({ required_error: "Please select a category." }),
 });
 
 const formSchema = z.object({
@@ -73,12 +83,6 @@ type ComboboxOption = {
   label: string;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  parent_id: string | null;
-};
-
 type CreateVoucherDialogProps = {
   onVoucherCreated: () => void;
 };
@@ -91,15 +95,13 @@ export function CreateVoucherDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [payeeOptions, setPayeeOptions] = useState<ComboboxOption[]>([]);
-  const [mainCategories, setMainCategories] = useState<Category[]>([]);
-  const [subCategoryMap, setSubCategoryMap] = useState<Map<string, Category[]>>(new Map());
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       payTo: "",
       date: new Date(),
-      items: [{ particulars: "", amount: 0, mainCategory: "", subCategory: "" }],
+      items: [{ particulars: "", amount: 0, category: "" }],
     },
   });
 
@@ -145,29 +147,6 @@ export function CreateVoucherDialog({
         const options = payeeData.map((p) => ({ value: p.name, label: p.name }));
         setPayeeOptions(options);
       }
-
-      // Fetch categories
-      const { data: categoryData, error: categoryError } = await supabase
-        .from("voucher_categories")
-        .select("id, name, parent_id");
-
-      if (categoryError) {
-        toast.error("Could not load categories.");
-      } else if (categoryData) {
-        const parents = categoryData.filter((c) => c.parent_id === null).sort((a, b) => a.name.localeCompare(b.name));
-        const children = categoryData.filter((c) => c.parent_id !== null);
-        
-        setMainCategories(parents);
-
-        const newSubCategoryMap = new Map<string, Category[]>();
-        parents.forEach(parent => {
-            const correspondingChildren = children
-                .filter(child => child.parent_id === parent.id)
-                .sort((a, b) => a.name.localeCompare(b.name));
-            newSubCategoryMap.set(parent.id, correspondingChildren);
-        });
-        setSubCategoryMap(newSubCategoryMap);
-      }
     };
     fetchDropdownData();
   }, [isOpen, session, supabase, profile]);
@@ -181,12 +160,6 @@ export function CreateVoucherDialog({
       0
     );
 
-    const finalItems = values.items.map(item => ({
-        particulars: item.particulars,
-        amount: item.amount,
-        category: item.subCategory,
-    }));
-
     try {
       const { data, error } = await supabase.rpc(
         "create_voucher_and_deduct_credit",
@@ -197,7 +170,7 @@ export function CreateVoucherDialog({
           p_details: {
             payTo: values.payTo,
             date: format(values.date, "yyyy-MM-dd"),
-            items: finalItems,
+            items: values.items,
           },
         }
       );
@@ -212,7 +185,7 @@ export function CreateVoucherDialog({
         form.reset({
           payTo: "",
           date: new Date(),
-          items: [{ particulars: "", amount: 0, mainCategory: "", subCategory: "" }],
+          items: [{ particulars: "", amount: 0, category: "" }],
           companyId: values.companyId, // Keep company selected
         });
       } else {
@@ -231,7 +204,7 @@ export function CreateVoucherDialog({
       <DialogTrigger asChild>
         <Button>Create New Voucher</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create New Voucher</DialogTitle>
           <DialogDescription>
@@ -336,7 +309,7 @@ export function CreateVoucherDialog({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-[1fr_150px_150px_150px_auto] items-start gap-2"
+                      className="grid grid-cols-[1fr_150px_150px_auto] items-start gap-2"
                     >
                       <FormField
                         control={form.control}
@@ -353,15 +326,12 @@ export function CreateVoucherDialog({
                       />
                       <FormField
                         control={form.control}
-                        name={`items.${index}.mainCategory`}
+                        name={`items.${index}.category`}
                         render={({ field }) => (
                           <FormItem>
-                            {index === 0 && <FormLabel>Main Category</FormLabel>}
+                            {index === 0 && <FormLabel>Category</FormLabel>}
                             <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                form.setValue(`items.${index}.subCategory`, "");
-                              }}
+                              onValueChange={field.onChange}
                               defaultValue={field.value}
                             >
                               <FormControl>
@@ -370,9 +340,9 @@ export function CreateVoucherDialog({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {mainCategories.map((cat) => (
-                                  <SelectItem key={cat.id} value={cat.id}>
-                                    {cat.name}
+                                {categoryOptions.map((category) => (
+                                  <SelectItem key={category} value={category}>
+                                    {category}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -380,39 +350,6 @@ export function CreateVoucherDialog({
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.subCategory`}
-                        render={({ field }) => {
-                          const selectedMainCategoryId = form.watch(`items.${index}.mainCategory`);
-                          const availableSubCategories = subCategoryMap.get(selectedMainCategoryId) || [];
-
-                          return (
-                            <FormItem>
-                              {index === 0 && <FormLabel>Sub-Category</FormLabel>}
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={!selectedMainCategoryId || availableSubCategories.length === 0}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {availableSubCategories.map((subCat) => (
-                                    <SelectItem key={subCat.id} value={subCat.name}>
-                                      {subCat.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          );
-                        }}
                       />
                       <FormField
                         control={form.control}
@@ -451,7 +388,7 @@ export function CreateVoucherDialog({
                 size="sm"
                 className="mt-2"
                 onClick={() =>
-                  append({ particulars: "", amount: 0, mainCategory: "", subCategory: "" })
+                  append({ particulars: "", amount: 0, category: "" })
                 }
                 disabled={fields.length >= 6}
               >

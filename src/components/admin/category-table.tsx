@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -66,6 +66,62 @@ export function CategoryTable({ categories, onActionComplete }: CategoryTablePro
     };
   }, [categories]);
 
+  const tableRows = hierarchicalCategories.flatMap((category) => {
+    const mainRow = (
+      <TableRow key={category.id} className="bg-muted/50">
+        <TableCell className="font-medium">{category.name}</TableCell>
+        <TableCell className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingCategory(category)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDeletingCategory(category)}
+                className="text-destructive"
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+    );
+
+    const childRows = category.children.map((child) => (
+      <TableRow key={child.id}>
+        <TableCell className="pl-10">{child.name}</TableCell>
+        <TableCell className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingCategory(child)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDeletingCategory(child)}
+                className="text-destructive"
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+    ));
+
+    return [mainRow, ...childRows];
+  });
+
   return (
     <>
       <div className="border rounded-lg">
@@ -77,58 +133,7 @@ export function CategoryTable({ categories, onActionComplete }: CategoryTablePro
             </TableRow>
           </TableHeader>
           <TableBody>
-            {hierarchicalCategories.map((category) => (
-              <Fragment key={category.id}>
-                <TableRow className="bg-muted/50">
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingCategory(category)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDeletingCategory(category)}
-                          className="text-destructive"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-                {category.children.map((child) => (
-                  <TableRow key={child.id}>
-                    <TableCell className="pl-10">{child.name}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditingCategory(child)}>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setDeletingCategory(child)}
-                            className="text-destructive"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </Fragment>
-            ))}
+            {tableRows}
           </TableBody>
         </Table>
       </div>

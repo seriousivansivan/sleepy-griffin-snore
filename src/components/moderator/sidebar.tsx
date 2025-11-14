@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Ticket, Shield, Contact } from "lucide-react";
+import { Home, Users, Ticket, Shield, Contact, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const moderatorNavItems = [
   { href: "/moderator/dashboard", label: "Dashboard", icon: Home },
   { href: "/moderator/users", label: "User Management", icon: Users },
   { href: "/moderator/payees", label: "Payee Management", icon: Contact },
+  { href: "/moderator/categories", label: "Category Management", icon: Tags },
   { href: "/moderator/vouchers", label: "Voucher Overview", icon: Ticket },
 ];
 

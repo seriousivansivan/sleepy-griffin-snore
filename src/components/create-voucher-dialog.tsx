@@ -29,7 +29,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -43,17 +45,6 @@ import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { toast } from "sonner";
 import { ScrollArea } from "./ui/scroll-area";
 import { Combobox } from "@/components/ui/combobox";
-
-const categoryOptions = [
-  "Transportation",
-  "Office Supplies",
-  "Meals & Entertainment",
-  "Utilities",
-  "Marketing",
-  "Travel",
-  "Visa and WorkPermit",
-  "Other",
-];
 
 const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
@@ -83,6 +74,17 @@ type ComboboxOption = {
   label: string;
 };
 
+type Category = {
+  id: string;
+  name: string;
+  parent_id: string | null;
+};
+
+type GroupedCategory = {
+  label: string;
+  options: Category[];
+};
+
 type CreateVoucherDialogProps = {
   onVoucherCreated: () => void;
 };
@@ -95,6 +97,7 @@ export function CreateVoucherDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [payeeOptions, setPayeeOptions] = useState<ComboboxOption[]>([]);
+  const [categories, setCategories] = useState<GroupedCategory[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -146,6 +149,28 @@ export function CreateVoucherDialog({
       } else {
         const options = payeeData.map((p) => ({ value: p.name, label: p.name }));
         setPayeeOptions(options);
+      }
+
+      // Fetch categories
+      const { data: categoryData, error: categoryError } = await supabase
+        .from("voucher_categories")
+        .select("id, name, parent_id");
+
+      if (categoryError) {
+        toast.error("Could not load categories.");
+      } else if (categoryData) {
+        const parents = categoryData.filter((c) => c.parent_id === null);
+        const children = categoryData.filter((c) => c.parent_id !== null);
+
+        parents.sort((a, b) => a.name.localeCompare(b.name));
+
+        const grouped: GroupedCategory[] = parents.map((parent) => ({
+          label: parent.name,
+          options: children
+            .filter((child) => child.parent_id === parent.id)
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        }));
+        setCategories(grouped);
       }
     };
     fetchDropdownData();
@@ -340,10 +365,18 @@ export function CreateVoucherDialog({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {categoryOptions.map((category) => (
-                                  <SelectItem key={category} value={category}>
-                                    {category}
-                                  </SelectItem>
+                                {categories.map((group) => (
+                                  <SelectGroup key={group.label}>
+                                    <SelectLabel>{group.label}</SelectLabel>
+                                    {group.options.map((category) => (
+                                      <SelectItem
+                                        key={category.id}
+                                        value={category.name}
+                                      >
+                                        {category.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
                                 ))}
                               </SelectContent>
                             </Select>

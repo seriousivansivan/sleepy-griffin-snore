@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Settings, Building, Ticket, BarChartBig, Contact } from "lucide-react";
+import { Home, Users, Settings, Building, Ticket, BarChartBig, Contact, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNavItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: Home },
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/payees", label: "Payee Management", icon: Contact },
+  { href: "/admin/categories", label: "Category Management", icon: LayoutGrid },
   { href: "/admin/companies", label: "Company Management", icon: Building },
   { href: "/admin/vouchers", label: "Voucher Overview", icon: Ticket },
   { href: "/admin/summary", label: "Summary", icon: BarChartBig },

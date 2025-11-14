@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import {
   Table,
   TableBody,
@@ -72,8 +72,8 @@ export function CategoryTable({ categories, onActionComplete }: CategoryTablePro
           </TableHeader>
           <TableBody>
             {hierarchicalCategories.map((category) => (
-              <>
-                <TableRow key={category.id} className="bg-muted/50">
+              <Fragment key={category.id}>
+                <TableRow className="bg-muted/50">
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -121,7 +121,7 @@ export function CategoryTable({ categories, onActionComplete }: CategoryTablePro
                     </TableCell>
                   </TableRow>
                 ))}
-              </>
+              </Fragment>
             ))}
           </TableBody>
         </Table>

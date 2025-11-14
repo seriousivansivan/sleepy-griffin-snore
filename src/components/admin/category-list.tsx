@@ -34,17 +34,23 @@ export function CategoryList({ categories, onActionComplete }: CategoryListProps
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex justify-between items-center w-full pr-4">
                     <span className="font-medium">{mainCategory.name}</span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setEditingCategory(mainCategory); }}>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {/* Actions for the main category are now here */}
+                  <div className="border-b pb-3 mb-3 flex justify-between items-center px-2">
+                     <p className="text-sm font-semibold text-muted-foreground">Manage Main Category</p>
+                     <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => setEditingCategory(mainCategory)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeletingCategory(mainCategory); }}>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingCategory(mainCategory)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent>
+
+                  {/* List of sub-categories */}
                   <ul className="pl-8 space-y-2 pt-2">
                     {mainCategory.sub_categories?.map((subCategory) => (
                       <li key={subCategory.id} className="flex justify-between items-center p-2 rounded-md hover:bg-muted">

@@ -92,6 +92,7 @@ export function UserProfileView() {
           user:profiles!user_id(id, user_name)
         `
           )
+          .eq("user_id", profile.id) // Explicitly filter for the current user's vouchers
           .order("created_at", { ascending: false });
 
         if (start) {

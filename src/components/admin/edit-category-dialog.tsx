@@ -147,7 +147,7 @@ export function EditCategoryDialog({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="null">None (Main Category)</SelectItem>
-                      {allCategories
+                      {(allCategories || [])
                         .filter(c => c.id !== category?.id) // Prevent self-parenting
                         .map((parentCat) => (
                         <SelectItem key={parentCat.id} value={parentCat.id}>

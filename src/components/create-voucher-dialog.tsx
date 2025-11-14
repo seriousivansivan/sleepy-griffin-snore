@@ -344,7 +344,7 @@ export function CreateVoucherDialog({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-[1fr_240px_120px_auto] items-start gap-2"
+                      className="grid grid-cols-[1fr_240px_120px_auto] items-end gap-2"
                     >
                       <FormField
                         control={form.control}
@@ -365,18 +365,20 @@ export function CreateVoucherDialog({
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             {index === 0 && <FormLabel>Category</FormLabel>}
-                            <CategoryPicker
-                              mainCategories={mainCategories}
-                              subCategoryMap={subCategoryMap}
-                              value={{
-                                mainCategoryId: form.getValues(`items.${index}.mainCategory`),
-                                subCategoryName: field.value,
-                              }}
-                              onChange={({ mainCategoryId, subCategoryName }) => {
-                                form.setValue(`items.${index}.mainCategory`, mainCategoryId);
-                                field.onChange(subCategoryName);
-                              }}
-                            />
+                            <FormControl>
+                              <CategoryPicker
+                                mainCategories={mainCategories}
+                                subCategoryMap={subCategoryMap}
+                                value={{
+                                  mainCategoryId: form.getValues(`items.${index}.mainCategory`),
+                                  subCategoryName: field.value,
+                                }}
+                                onChange={({ mainCategoryId, subCategoryName }) => {
+                                  form.setValue(`items.${index}.mainCategory`, mainCategoryId);
+                                  field.onChange(subCategoryName);
+                                }}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -404,7 +406,6 @@ export function CreateVoucherDialog({
                         size="icon"
                         onClick={() => remove(index)}
                         disabled={fields.length <= 1}
-                        className={cn(index === 0 ? "mt-8" : "mt-1")}
                       >
                         <XCircle className="h-5 w-5 text-red-500" />
                       </Button>

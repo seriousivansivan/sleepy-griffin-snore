@@ -43,6 +43,7 @@ import { useSupabaseAuth } from "@/components/providers/supabase-auth-provider";
 import { toast } from "sonner";
 import { ScrollArea } from "./ui/scroll-area";
 import { Combobox } from "@/components/ui/combobox";
+import { CategoryPicker } from "./ui/category-picker";
 
 type Company = {
   id: string;
@@ -68,8 +69,8 @@ type CreateVoucherDialogProps = {
 const itemSchema = z.object({
   particulars: z.string().min(1, "Particulars are required."),
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
-  mainCategory: z.string({ required_error: "Please select a main category." }),
-  category: z.string({ required_error: "Please select a sub-category." }), // This will hold the sub-category name
+  mainCategory: z.string({ required_error: "Please select a category." }),
+  category: z.string({ required_error: "Please select a category." }),
 });
 
 const formSchema = z.object({
@@ -186,7 +187,7 @@ export function CreateVoucherDialog({
     const itemsToSubmit = values.items.map(item => ({
       particulars: item.particulars,
       amount: item.amount,
-      category: item.category, // This is the sub-category name
+      category: item.category,
     }));
 
     const calculatedTotalAmount = itemsToSubmit.reduce(
@@ -213,14 +214,14 @@ export function CreateVoucherDialog({
 
       if (data.success) {
         toast.success(data.message);
-        await refreshProfile(); // Refresh profile to get updated credit
+        await refreshProfile();
         onVoucherCreated();
         setIsOpen(false);
         form.reset({
           payTo: "",
           date: new Date(),
           items: [{ particulars: "", amount: 0, mainCategory: "", category: "" }],
-          companyId: values.companyId, // Keep company selected
+          companyId: values.companyId,
         });
       } else {
         toast.error(data.message || "An unknown error occurred.");
@@ -343,7 +344,7 @@ export function CreateVoucherDialog({
                   {fields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-[1fr_160px_160px_120px_auto] items-start gap-2"
+                      className="grid grid-cols-[1fr_240px_120px_auto] items-start gap-2"
                     >
                       <FormField
                         control={form.control}
@@ -360,58 +361,22 @@ export function CreateVoucherDialog({
                       />
                       <FormField
                         control={form.control}
-                        name={`items.${index}.mainCategory`}
-                        render={({ field }) => (
-                          <FormItem>
-                            {index === 0 && <FormLabel>Main Category</FormLabel>}
-                            <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                form.setValue(`items.${index}.category`, ""); // Reset sub-category
-                              }}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select..." />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {mainCategories.map((category) => (
-                                  <SelectItem key={category.id} value={category.id}>
-                                    {category.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
                         name={`items.${index}.category`}
                         render={({ field }) => (
-                          <FormItem>
-                            {index === 0 && <FormLabel>Sub-Category</FormLabel>}
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={!watchedItems[index]?.mainCategory}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select..." />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {(subCategoryMap.get(watchedItems[index]?.mainCategory || "") || []).map((subCat) => (
-                                  <SelectItem key={subCat.id} value={subCat.name}>
-                                    {subCat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <FormItem className="flex flex-col">
+                            {index === 0 && <FormLabel>Category</FormLabel>}
+                            <CategoryPicker
+                              mainCategories={mainCategories}
+                              subCategoryMap={subCategoryMap}
+                              value={{
+                                mainCategoryId: form.getValues(`items.${index}.mainCategory`),
+                                subCategoryName: field.value,
+                              }}
+                              onChange={({ mainCategoryId, subCategoryName }) => {
+                                form.setValue(`items.${index}.mainCategory`, mainCategoryId);
+                                field.onChange(subCategoryName);
+                              }}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}

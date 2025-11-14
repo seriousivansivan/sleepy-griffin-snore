@@ -33,30 +33,36 @@ export function CategoryTable({ categories, onActionComplete }: CategoryTablePro
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
   const { hierarchicalCategories, mainCategories } = useMemo(() => {
-    const main: HierarchicalCategory[] = [];
-    const childrenMap = new Map<string, Category[]>();
+    if (!Array.isArray(categories)) {
+      return { hierarchicalCategories: [], mainCategories: [] };
+    }
+
+    const categoryMap = new Map<string, HierarchicalCategory>();
+    const rootCategories: HierarchicalCategory[] = [];
 
     categories.forEach(category => {
-      if (category.parent_id) {
-        if (!childrenMap.has(category.parent_id)) {
-          childrenMap.set(category.parent_id, []);
-        }
-        childrenMap.get(category.parent_id)!.push(category);
-      }
+      categoryMap.set(category.id, { ...category, children: [] });
     });
 
     categories.forEach(category => {
-      if (!category.parent_id) {
-        main.push({
-          ...category,
-          children: childrenMap.get(category.id) || [],
-        });
+      if (category.parent_id && categoryMap.has(category.parent_id)) {
+        const parent = categoryMap.get(category.parent_id)!;
+        const child = categoryMap.get(category.id)!;
+        parent.children.push(child);
+      } else {
+        const rootCategory = categoryMap.get(category.id)!;
+        rootCategories.push(rootCategory);
       }
     });
+    
+    rootCategories.forEach(cat => {
+        cat.children.sort((a, b) => a.name.localeCompare(b.name));
+    });
+    rootCategories.sort((a, b) => a.name.localeCompare(b.name));
 
     return {
-      hierarchicalCategories: main,
-      mainCategories: main.map(({ children, ...rest }) => rest),
+      hierarchicalCategories: rootCategories,
+      mainCategories: rootCategories.map(({ children, ...rest }) => rest),
     };
   }, [categories]);
 
